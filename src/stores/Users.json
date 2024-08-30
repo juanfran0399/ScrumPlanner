@@ -1,0 +1,18 @@
+[
+    {
+        "id": 1,
+        "name": "Alejandro Maciel",
+        "username": "219750132",
+        "password": "123456"
+    },{
+        "id": 2,
+        "name": "Luis García",
+        "username": "220792744",
+        "password": "123456"
+    },{
+        "id": 2,
+            "name": "Francisco",
+            "username": "219295796",
+            "password": "123456" 
+    }
+]
