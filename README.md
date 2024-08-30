@@ -40,3 +40,10 @@ Con la finalidad de que todo el equipo involucrado en el desarrollo de este proy
 Por lo que es necesario que utilices Visual Studio Code como IDE, e importes y utilices el perfil que se encuentra en este mismo repositorio (`MasterReact.code-profile`)
 
 Esto te cargará las extensiones y configuraciones para que trabajemos con un mismo guía de estilo
+
+
+Comandos para Pullear
+
+git add . (Agrega todo el codigo a un stage)
+npx cz (Esta herramienta nos permite hacer commit desde consola)
+git push (Todos los cambios del stage los sube a tu rama)
