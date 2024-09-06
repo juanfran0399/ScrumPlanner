@@ -152,42 +152,59 @@ const preguntas = [
   }
 ]
 
-// Columnas para DataTable
-const columns: Array<ColumnDef<any>> = [
-  {
-    header: 'Pregunta',
-    accessorKey: 'texto'
-  },
-  {
-    header: 'Opciones',
-    cell: ({ row }) => (
-      <div>
-        {row.original.opciones.map((opcion: string, index: number) => (
-          <label key={index} className='block'>
-            <input
-              type='radio'
-              name={`opcion_${row.original.id}`}
-              value={opcion}
-              className='mr-2'
-              onChange={() => handleOptionChange(row.original.id, opcion)}
-            />
-            {opcion}
-          </label>
-        ))}
-      </div>
-    )
-  }
-]
-
 const EncuestaPage = () => {
   const [selectedOptions, setSelectedOptions] = useState<{ [key: number]: string | null }>({})
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleOptionChange = (id: number, opcion: string) => {
-    setSelectedOptions(prev => ({
+    setSelectedOptions((prev) => ({
       ...prev,
       [id]: opcion
     }))
+    setError(null)
   }
+
+  const handleSubmit = () => {
+    const unanswered = preguntas.some(pregunta => !selectedOptions[pregunta.id])
+
+    if (unanswered) {
+      setError('Por favor, responde todas las preguntas antes de enviar.')
+      return
+    }
+
+    setSubmitted(true)
+    setError(null)
+    console.log('Form submitted. Answers:', selectedOptions)
+  }
+
+  // Columnas para DataTable
+  const columns: Array<ColumnDef<any>> = [
+    {
+      header: 'Pregunta',
+      accessorKey: 'texto'
+    },
+    {
+      header: 'Opciones',
+      cell: ({ row }) => (
+        <div>
+          {row.original.opciones.map((opcion: string, index: number) => (
+            <label key={index} className='block'>
+              <input
+                type='radio'
+                name={`opcion_${row.original.id}`}
+                value={opcion}
+                checked={selectedOptions[row.original.id] === opcion}
+                className='mr-2'
+                onChange={() => handleOptionChange(row.original.id, opcion)}
+              />
+              {opcion}
+            </label>
+          ))}
+        </div>
+      )
+    }
+  ]
 
   return (
     <Layout>
@@ -203,10 +220,30 @@ const EncuestaPage = () => {
             <Separator className='my-4' />
             <DataTable columns={columns} data={preguntas} />
 
+            {/* Mostrar error si hay preguntas sin responder */}
+            {error && <p className='mt-4 text-red-500'>{error}</p>}
+
             {/* Enviar botón */}
-            <Button className='mt-4 bg-[#9A3324] text-white'>
+            <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
               Enviar
             </Button>
+
+            {/* Mostrar respuestas después de enviar */}
+            {submitted && !error && (
+              <div className='mt-6'>
+                <h2 className='text-lg font-bold'>Tus respuestas:</h2>
+                <ul className='mt-2 ml-6 list-disc'>
+                  {Object.entries(selectedOptions).map(([id, respuesta]) => {
+                    const pregunta = preguntas.find((p) => p.id === Number(id))
+                    return (
+                      <li key={id}>
+                        <strong>{pregunta?.texto}</strong>: {respuesta}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

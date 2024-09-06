@@ -14,7 +14,7 @@ const Content = (): ReactNode => {
             <CardTitle>Scrum Planner</CardTitle>
           </CardHeader>
           <CardContent>
-            <h1 className='mb-4 text-2xl'>Gestor de Proyectossssss</h1>
+            <h1 className='mb-4 text-2xl'>Gestor de Proyectos</h1>
             <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
               <Link to='/proyects' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
@@ -28,7 +28,7 @@ const Content = (): ReactNode => {
                 </div>
                 <p>Equipos</p>
               </Link>
-              <Link to='/shipments' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/survey' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconUserQuestion size={64} stroke={2} />
                 </div>
