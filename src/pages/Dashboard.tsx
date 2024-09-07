@@ -11,7 +11,7 @@ const Content = (): ReactNode => {
       <div className='grid items-start gap-4'>
         <Card>
           <CardHeader>
-            <CardTitle>Scrum Planner</CardTitle>
+            <CardTitle>Scrum Plannersss</CardTitle>
           </CardHeader>
           <CardContent>
             <h1 className='mb-4 text-2xl'>Gestor de Proyectos</h1>
