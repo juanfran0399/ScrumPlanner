@@ -1,0 +1,25 @@
+{
+    "teams": [
+      {
+        "id": 1,
+        "name": "Team Alpha",
+        "membersCount": 5
+      },
+      {
+        "id": 2,
+        "name": "Team Beta",
+        "membersCount": 3
+      },
+      {
+        "id": 3,
+        "name": "Team Gamma",
+        "membersCount": 4
+      },
+      {
+        "id": 4,
+        "name": "Team Delta",
+        "membersCount": 2
+      }
+    ]
+  }
+  

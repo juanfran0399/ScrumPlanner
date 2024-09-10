@@ -22,7 +22,7 @@ const Content = (): ReactNode => {
                 </div>
                 <p>Proyect Dashboard</p>
               </Link>
-              <Link to='/shipments' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/teams' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconBrandTeams size={64} stroke={2} />
                 </div>

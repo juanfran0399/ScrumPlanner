@@ -12,6 +12,7 @@ import Proyects from './pages/Proyects'
 import Poker from './pages/Poker'
 import Survey from './pages/Survey'
 import Planning from './pages/Planning'
+import Teams from './pages/Teams'
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: 'planning',
         element: <Planning />
+      },
+      {
+        path: 'teams',
+        element: <Teams />
       }
     ]
   }

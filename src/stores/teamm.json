@@ -1,0 +1,22 @@
+[{
+    "user": {
+      "id": 1,
+      "name": "Alejandro Maciel",
+      "teamId": null
+    }
+  }, {
+    "user": {
+      "id": 2,
+      "name": "Luis Garcia",
+      "teamId": null
+    }
+  },
+  {
+    "user": {
+      "id": 3,
+      "name": "Francisco",
+      "teamId": null
+    }
+  }
+
+]  
