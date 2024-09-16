@@ -120,20 +120,20 @@ const TeamsPage = () => {
     <Layout>
       <div className='container mx-auto mt-8'>
         {user != null && user.teamId
-? (
-          <div>
-            <h1 className='text-2xl font-bold'>You are part of a team!</h1>
-            <p>You are in team {teams.find((team) => team.id === user.teamId)?.name}</p>
-            <Button className='mt-4 text-white bg-red-500' onClick={leaveTeam}>
+          ? (
+            <div>
+    <h1 className='text-2xl font-bold'>You are part of a team!</h1>
+    <p>You are in team {teams.find((team) => team.id === user.teamId)?.name}</p>
+    <Button className='mt-4 text-white bg-red-500' onClick={leaveTeam}>
               Leave Team
             </Button>
-          </div>
-        )
-: (
-          <div>
-            <h1 className='text-2xl font-bold'>Available Teams</h1>
-            <p>Select a team to join or create a new one:</p>
-            <div className='flex flex-wrap gap-4'>
+  </div>
+            )
+          : (
+            <div>
+    <h1 className='text-2xl font-bold'>Available Teams</h1>
+    <p>Select a team to join or create a new one:</p>
+    <div className='flex flex-wrap gap-4'>
               {teams.map((team) => (
                 <div key={team.id} className='flex items-center gap-2'>
                   <Button
@@ -151,13 +151,13 @@ const TeamsPage = () => {
                 </div>
               ))}
             </div>
-            {selectedTeam && (
+    {selectedTeam && (
               <Button className='mt-4' onClick={() => joinTeam(selectedTeam)}>
                 Join Selected Team
               </Button>
             )}
-            <Separator className='my-4' />
-            <div>
+    <Separator className='my-4' />
+    <div>
               <h2 className='text-xl font-bold'>Create a New Team</h2>
               <input
                 type='text'
@@ -170,8 +170,8 @@ const TeamsPage = () => {
                 Create Team
               </Button>
             </div>
-          </div>
-        )}
+  </div>
+            )}
       </div>
     </Layout>
   )
