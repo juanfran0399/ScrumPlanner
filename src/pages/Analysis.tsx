@@ -19,7 +19,7 @@ const Analysis = () => {
     'Aplicación de Tareas': ['Tarea 4', 'Tarea 5'],
     'Plataforma de Aprendizaje en Línea': ['Tarea 6', 'Tarea 7', 'Tarea 8'],
     'Sitio Web de Comercio Electrónico': ['Tarea 9', 'Tarea 10'],
-    'Sistema de Reservas de Hotel': ['Tarea 11', 'Tarea 12'],
+    'Sistema de Reservas de Hotel': ['Tarea 11', 'Tarea 12']
   };
 
   const cards = ['0', '0.5', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '∞'];

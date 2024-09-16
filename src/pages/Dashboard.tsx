@@ -45,7 +45,7 @@ const Content = (): ReactNode => {
                 <p>Scrum Poker</p>
               </Link>
 
-              <Link to='/events' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/planning' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconWriting size={64} stroke={2} />
                 </div>

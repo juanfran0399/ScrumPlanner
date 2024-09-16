@@ -1,29 +1,26 @@
 import { useState } from 'react'
+import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '../ui/switch'
 import video from '@/assets/media/Udg.mp4'
 import LogoUDG from '@/assets/images/favicon.png'
-import Users from '@/stores/Users.json'
 import useAuthStore from '@/stores/useAuthStore'
 import { useNavigate } from 'react-router-dom'
 
 const LoginForm = (): JSX.Element => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-
   const [userNameError, setUserNameError] = useState<boolean>(false)
   const [passwordError, setPasswordError] = useState<boolean>(false)
-
-  const [processing, setProcessing] = useState<boolean>(false)
   const [loginError, setLoginError] = useState<boolean>(false)
+  const [processing, setProcessing] = useState<boolean>(false)
 
   const login = useAuthStore((state) => state.login)
-
   const navigate = useNavigate()
 
-  const handleSubmit = (): void => {
+  const handleSubmit = async (): Promise<void> => {
     if (username.trim() === '') {
       setUserNameError(true)
     }
@@ -34,23 +31,33 @@ const LoginForm = (): JSX.Element => {
 
     if (username.trim() !== '' && password.trim() !== '') {
       setProcessing(true)
+      try {
+        const response = await axios.post('http://localhost:5000/api/auth/login', {
+          username,
+          contrasena: password
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
 
-      const found = Users.find((user) => user.username === username && user.password === password)
+        if (response.data.success) {
+          const rememberMe = localStorage.getItem('rememberMe') === 'true'
+          if (rememberMe) {
+            localStorage.setItem('user', username)
+            localStorage.setItem('isLoggedIn', 'true')
+          }
 
-      if (found != null) {
-        const rememberMe = localStorage.getItem('rememberMe') === 'true'
-
-        if (rememberMe) {
-          localStorage.setItem('user', found.username)
-          localStorage.setItem('isLoggedIn', 'true')
+          login()
+          navigate('/dashboard')
+        } else {
+          setLoginError(true)
         }
-
-        login()
-        navigate('/dashboard')
-      } else {
-        setProcessing(false)
+      } catch (error) {
+        console.error('Login error', error)
         setLoginError(true)
       }
+      setProcessing(false)
     }
   }
 
@@ -58,7 +65,6 @@ const LoginForm = (): JSX.Element => {
     <div className='w-full min-h-screen lg:grid lg:grid-cols-2'>
       <div className='flex items-center justify-center py-12'>
         <div className='grid w-10/12 gap-6 mx-auto md:w-1/2'>
-
           <picture>
             <source srcSet={LogoUDG} media='(prefers-color-scheme: dark)' />
             <source srcSet={LogoUDG} media='(prefers-color-scheme: light)' />
@@ -124,7 +130,8 @@ const LoginForm = (): JSX.Element => {
             {loginError && (
               <div className='p-4 text-center rounded bg-destructive/50 text-foreground'>
                 La combinación de Usuario y Contraseña ingresa no corresponde a un usuario existente
-              </div>)}
+              </div>
+            )}
 
             <Button type='submit' onClick={handleSubmit} className='w-full' disabled={processing}>Ingresar</Button>
           </div>
@@ -135,7 +142,6 @@ const LoginForm = (): JSX.Element => {
           <source src={video} type='video/mp4' />
         </video>
       </div>
-
     </div>
   )
 }

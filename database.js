@@ -10,6 +10,8 @@ const pool = mysql.createPool({
   database: process.env.MYSQL_DATABASE
 }).promise()
 
+export default pool
+
 // Ejemplo de input (para prevenir inyección SQL)
 // const testId = 1
 
@@ -36,5 +38,10 @@ export async function addId (Test) {
   return result
 }
 
-const notes = await getIds()
+export async function userGet (username, contrasena) {
+  const [rows] = await pool.query('SELECT * FROM Usuario WHERE (username, contrasena) = (?, ?)', [username, contrasena])
+  return rows
+}
+
+const notes = await userGet('Alejandro', '123456')
 console.log(notes)

@@ -1,0 +1,15 @@
+{
+  "name": "your-backend-project",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mysql2": "^2.3.3",
+    "dotenv": "^10.0.0",
+    "cors": "^7.0.0"
+  }
+}
