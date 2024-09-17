@@ -9,7 +9,7 @@ const Content = (): ReactNode => {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('user_id')
+    const storedUserId = localStorage.getItem('id_usuario')
     setUserId(storedUserId)
   }, [])
 

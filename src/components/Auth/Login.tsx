@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 
 const LoginForm = (): JSX.Element => {
   const [username, setUsername] = useState('')
+  const [id_usuario] = useState('')
   const [password, setPassword] = useState('')
   const [userNameError, setUserNameError] = useState<boolean>(false)
   const [passwordError, setPasswordError] = useState<boolean>(false)
@@ -41,20 +42,20 @@ const LoginForm = (): JSX.Element => {
           }
         })
 
-        if (response.data.success) {
-          const { user_id } = response.data // Extract user_id from the response
+        console.log('Response:', response.data) // Debug log
 
-          const rememberMe = localStorage.getItem('rememberMe') === 'true'
-          if (rememberMe) {
+        if (response.data.success) {
+          const id_usuario = response.data.id_usuario // Ensure id_usuario is being accessed properly
+          console.log('Frontend id_usuario:', id_usuario) // Debug log
+
+          if (localStorage.getItem('rememberMe') === 'true') {
             localStorage.setItem('user', username)
+            localStorage.setItem('id_usuario', id_usuario) // Save id_usuario to localStorage
             localStorage.setItem('isLoggedIn', 'true')
-            localStorage.setItem('user_id', user_id) // Save user_id to localStorage
           }
 
-          login() // Assuming login function in useAuthStore handles authentication state
-
-          // Pass user_id to the next page using navigate
-          navigate('/dashboard', { state: { user_id } })
+          login() // Assuming this is a state update function
+          navigate('/dashboard')
         } else {
           setLoginError(true)
         }
@@ -62,6 +63,7 @@ const LoginForm = (): JSX.Element => {
         console.error('Login error', error)
         setLoginError(true)
       }
+
       setProcessing(false)
     }
   }
@@ -99,7 +101,9 @@ const LoginForm = (): JSX.Element => {
               {userNameError && <span className='text-destructive'>Es necesario que ingreses tu usuario</span>}
             </div>
             <div className='grid gap-2'>
-              <Label className={passwordError ? 'text-destructive' : ''} htmlFor='password'>Contraseña</Label>
+              <div className='flex items-center'>
+                <Label className={passwordError ? 'text-destructive' : ''} htmlFor='password'>Contraseña</Label>
+              </div>
               <Input
                 id='password'
                 type='password'
