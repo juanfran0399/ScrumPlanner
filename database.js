@@ -1,5 +1,6 @@
 import mysql from 'mysql2'
 import dotenv from 'dotenv'
+import { identifierToKeywordKind } from 'typescript'
 dotenv.config()
 
 // Crea una conexión
@@ -43,5 +44,10 @@ export async function userGet (username, contrasena) {
   return rows
 }
 
-const notes = await userGet('Alejandro', '123456')
+export async function addSur (id_usuario, puntaje) {
+  const result = await pool.query('INSERT INTO Encuesta (id_usuario, puntaje) VALUES (?, ?)', [id_usuario, puntaje])
+  return result
+}
+
+const notes = await addSur('25', '35')
 console.log(notes)

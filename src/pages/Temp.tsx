@@ -1,143 +1,253 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '../ui/switch'
-import video from '@/assets/media/Udg.mp4'
-import LogoUDG from '@/assets/images/favicon.png'
-import Users from '@/stores/Users.json'
-import useAuthStore from '@/stores/useAuthStore'
-import { useNavigate } from 'react-router-dom'
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable
+} from '@tanstack/react-table'
 
-const LoginForm = (): JSX.Element => {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
 
-  const [userNameError, setUserNameError] = useState<boolean>(false)
-  const [passwordError, setPasswordError] = useState<boolean>(false)
+// Componente DataTable
+interface DataTableProps<TData, TValue> {
+  columns: Array<ColumnDef<TData, TValue>>
+  data: TData[]
+}
 
-  const [processing, setProcessing] = useState<boolean>(false)
-  const [loginError, setLoginError] = useState<boolean>(false)
-
-  const login = useAuthStore((state) => state.login)
-
-  const navigate = useNavigate()
-
-  const handleSubmit = (): void => {
-    if (username.trim() === '') {
-      setUserNameError(true)
-    }
-
-    if (password.trim() === '') {
-      setPasswordError(true)
-    }
-
-    if (username.trim() !== '' && password.trim() !== '') {
-      setProcessing(true)
-
-      const found = Users.find((user) => user.username === username && user.password === password)
-
-      if (found != null) {
-        const rememberMe = localStorage.getItem('rememberMe') === 'true'
-
-        if (rememberMe) {
-          localStorage.setItem('user', found.username)
-          localStorage.setItem('isLoggedIn', 'true')
-        }
-
-        login()
-        navigate('/dashboard')
-      } else {
-        setProcessing(false)
-        setLoginError(true)
-      }
-    }
-  }
+export function DataTable<TData, TValue> ({
+  columns,
+  data
+}: DataTableProps<TData, TValue>) {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel()
+  })
 
   return (
-    <div className='w-full min-h-screen lg:grid lg:grid-cols-2'>
-      <div className='flex items-center justify-center py-12'>
-        <div className='grid w-10/12 gap-6 mx-auto md:w-1/2'>
-
-          <picture>
-            <source srcSet={LogoUDG} media='(prefers-color-scheme: dark)' />
-            <source srcSet={LogoUDG} media='(prefers-color-scheme: light)' />
-            <img src={LogoUDG} alt='Logo de Leones Negros' className='w-auto mx-auto' />
-          </picture>
-          <div className='grid gap-2 text-center'>
-            <h1 className='text-3xl font-bold'>Iniciar Sesión</h1>
-            <p className='text-balance text-muted-foreground'>
-              Ingresa tus credenciales a continuación para iniciar sesión
-            </p>
-          </div>
-          <div className='grid gap-4'>
-            <div className='grid gap-2'>
-              <Label className={userNameError ? 'text-destructive' : ''} htmlFor='username'>Usuario</Label>
-              <Input
-                id='username'
-                type='text'
-                placeholder='Código UDG'
-                onChange={(e) => {
-                  setUsername(e.target.value)
-                  setUserNameError(false)
-                }}
-                className={userNameError ? 'border-destructive' : ''}
-                disabled={processing}
-                required
-              />
-              {userNameError && <span className='text-destructive'>Es necesario que ingreses tu usuario</span>}
-            </div>
-            <div className='grid gap-2'>
-              <div className='flex items-center'>
-                <Label className={passwordError ? 'text-destructive' : ''} htmlFor='password'>Contraseña</Label>
-              </div>
-              <Input
-                id='password'
-                type='password'
-                placeholder='********'
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setPasswordError(false)
-                }}
-                className={passwordError ? 'border-destructive' : ''}
-                disabled={processing}
-                required
-              />
-              {passwordError && <span className='text-destructive'>Es necesario que ingreses tu contraseña</span>}
-            </div>
-
-            <div className='flex items-center justify-start'>
-              <Label htmlFor='remember-me' className='flex items-center'>
-                Recordar mi sesión
-              </Label>
-              <Switch
-                className='ml-2'
-                id='remember-me'
-                defaultChecked={localStorage.getItem('rememberMe') === 'true'}
-                onCheckedChange={(checked) => {
-                  localStorage.setItem('rememberMe', checked.toString())
-                }}
-                disabled={processing}
-              />
-            </div>
-
-            {loginError && (
-              <div className='p-4 text-center rounded bg-destructive/50 text-foreground'>
-                La combinación de Usuario y Contraseña ingresa no corresponde a un usuario existente
-              </div>)}
-
-            <Button type='submit' onClick={handleSubmit} className='w-full' disabled={processing}>Ingresar</Button>
-          </div>
-        </div>
-      </div>
-      <div className='relative bg-gray-800 lg:block'>
-        <video autoPlay muted loop className='w-full h-full'>
-          <source src={video} type='video/mp4' />
-        </video>
-      </div>
-
+    <div className='border rounded-md'>
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length
+            ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && 'selected'}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+                ))
+              )
+            : (
+              <TableRow>
+    <TableCell colSpan={columns.length} className='h-24 text-center'>
+                No results.
+              </TableCell>
+  </TableRow>
+              )}
+        </TableBody>
+      </Table>
     </div>
   )
 }
 
-export default LoginForm
+// Preguntas y opciones
+const preguntas = [
+  {
+    id: 1,
+    texto: '¿Te consideras efectivo/a en comunicarte con diferentes grupos de interés (stakeholders, equipo de desarrollo, etc.)?',
+    opciones: ['Muy efectivo/a', 'Bastante efectivo/a', 'Algo efectivo/a', 'No muy efectivo/a']
+  },
+  {
+    id: 2,
+    texto: '¿Tienes experiencia en desarrollo de software y conocimientos técnicos relevantes para el proyecto?',
+    opciones: ['Mucho', 'Bastante', 'Algo', 'Poco']
+  },
+  {
+    id: 3,
+    texto: '¿Te sientes cómodo/a resolviendo impedimentos que puedan surgir durante el desarrollo del proyecto?',
+    opciones: ['Muy cómodo/a', 'Bastante cómodo/a', 'Algo cómodo/a', 'No muy cómodo/a']
+  },
+  {
+    id: 4,
+    texto: '¿Te consideras bueno/a facilitando discusiones y ayudando a otros a alcanzar consensos?',
+    opciones: ['Muy bueno/a', 'Bastante bueno/a', 'Algo bueno/a', 'No muy bueno/a']
+  },
+  {
+    id: 5,
+    texto: '¿Eres flexible y capaz de asumir múltiples roles o tareas según sea necesario?',
+    opciones: ['Muy flexible', 'Bastante flexible', 'Algo flexible', 'Poco flexible']
+  },
+  {
+    id: 6,
+    texto: '¿Eres bueno/a analizando datos y utilizando esa información para tomar decisiones informadas?',
+    opciones: ['Muy bueno/a', 'Bastante bueno/a', 'Algo bueno/a', 'Poco bueno/a']
+  },
+  {
+    id: 7,
+    texto: '¿Tienes experiencia trabajando en entornos ágiles fuera del marco Scrum?',
+    opciones: ['Sí', 'No', 'A veces']
+  },
+  {
+    id: 8,
+    texto: '¿Qué tan seguido asumen posiciones de liderato?',
+    opciones: ['Siempre', 'Frecuentemente', 'A veces', 'Raramente']
+  },
+  {
+    id: 9,
+    texto: '¿Logras terminar a tiempo tus actividades y tareas?',
+    opciones: ['Siempre', 'Frecuentemente', 'A veces', 'Raramente']
+  },
+  {
+    id: 10,
+    texto: '¿Cómo consideras tus habilidades para hacer documentación?',
+    opciones: ['Muy buenas', 'Buenas', 'Adecuadas', 'Pobres']
+  },
+  {
+    id: 11,
+    texto: '¿Cuando hay un problema cuál es tu aproximación para resolverlo?',
+    opciones: ['Proactiva', 'Reactiva', 'Busca ayuda', 'Ignora el problema']
+  },
+  {
+    id: 12,
+    texto: '¿Consideras importante la documentación en un proyecto?',
+    opciones: ['Sí', 'No', 'A veces']
+  },
+  {
+    id: 13,
+    texto: '¿Qué consideras más importante en un proyecto?',
+    opciones: ['Comunicación', 'Documentación', 'Cumplimiento de plazos', 'Calidad del producto']
+  }
+]
+
+const EncuestaPage = () => {
+  const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [totalScore, setTotalScore] = useState<number | null>(null)
+
+  const handleOptionChange = (id: number, score: number) => {
+    setSelectedScores((prev) => ({
+      ...prev,
+      [id]: score
+    }))
+    setError(null)
+  }
+
+  const handleSubmit = () => {
+    const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
+
+    if (unanswered) {
+      setError('Por favor, responde todas las preguntas antes de enviar.')
+      return
+    }
+
+    // Calculate total score
+    const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
+    setTotalScore(score)
+    setSubmitted(true)
+    setError(null)
+    console.log('Form submitted. Scores:', selectedScores)
+    console.log('Total score:', score)
+  }
+
+  // Columnas para DataTable
+  const columns: Array<ColumnDef<any>> = [
+    {
+      header: 'Pregunta',
+      accessorKey: 'texto'
+    },
+    {
+      header: 'Opciones',
+      cell: ({ row }) => (
+        <div>
+          {row.original.opciones.map((opcion: string, index: number) => (
+            <label key={index} className='block'>
+              <input
+                type='radio'
+                name={`opcion_${row.original.id}`}
+                value={opcion}
+                checked={selectedScores[row.original.id] === 4 - index}
+                className='mr-2'
+                onChange={() => handleOptionChange(row.original.id, 4 - index)}
+              />
+              {opcion}
+            </label>
+          ))}
+        </div>
+      )
+    }
+  ]
+
+  return (
+    <Layout>
+      <div className='container mx-auto mt-8'>
+        <Card>
+          <CardHeader>
+            <CardTitle>Encuesta de Satisfacción</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
+
+            {/* Tabla de Preguntas */}
+            <Separator className='my-4' />
+            <DataTable columns={columns} data={preguntas} />
+
+            {/* Mostrar error si hay preguntas sin responder */}
+            {error && <p className='mt-4 text-red-500'>{error}</p>}
+
+            {/* Enviar botón */}
+            <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
+              Enviar
+            </Button>
+
+            {/* Mostrar la puntuación después de enviar */}
+            {submitted && !error && (
+              <div className='mt-6'>
+                <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
+                <p className='text-xl'>{totalScore}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  )
+}
+
+export default EncuestaPage

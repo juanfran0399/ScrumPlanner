@@ -3,23 +3,24 @@ import pool from '../database.js'
 
 const router = express.Router()
 
-// Authentication route
-router.post('/login', async (req, res) => {
-  const { username, contrasena } = req.body
+// New survey data
+router.post('/survey', async (req, res) => {
+  const { id_usuario, puntaje } = req.body
 
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM Usuario WHERE username = ? AND contrasena = ?',
-      [username, contrasena]
+    // Execute the query to insert the survey data
+    const [result] = await pool.query(
+      'INSERT INTO Encuesta (id_usuario, puntaje) VALUES (?, ?)', [id_usuario, puntaje]
     )
 
-    if (rows.length > 0) {
-      res.json({ success: true, user: rows[0] })
+    // Check if any rows were affected
+    if (result.affectedRows > 0) {
+      res.json({ success: true, message: 'Survey data added successfully' })
     } else {
-      res.status(401).json({ success: false, message: 'Invalid credentials' })
+      res.status(400).json({ success: false, message: 'Failed to insert survey data' })
     }
   } catch (error) {
-    console.error(error)
+    console.error('Error inserting survey data:', error)
     res.status(500).json({ success: false, message: 'Internal server error' })
   }
 })

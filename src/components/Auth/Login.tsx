@@ -42,14 +42,19 @@ const LoginForm = (): JSX.Element => {
         })
 
         if (response.data.success) {
+          const { user_id } = response.data // Extract user_id from the response
+
           const rememberMe = localStorage.getItem('rememberMe') === 'true'
           if (rememberMe) {
             localStorage.setItem('user', username)
             localStorage.setItem('isLoggedIn', 'true')
+            localStorage.setItem('user_id', user_id) // Save user_id to localStorage
           }
 
-          login()
-          navigate('/dashboard')
+          login() // Assuming login function in useAuthStore handles authentication state
+
+          // Pass user_id to the next page using navigate
+          navigate('/dashboard', { state: { user_id } })
         } else {
           setLoginError(true)
         }
@@ -94,9 +99,7 @@ const LoginForm = (): JSX.Element => {
               {userNameError && <span className='text-destructive'>Es necesario que ingreses tu usuario</span>}
             </div>
             <div className='grid gap-2'>
-              <div className='flex items-center'>
-                <Label className={passwordError ? 'text-destructive' : ''} htmlFor='password'>Contraseña</Label>
-              </div>
+              <Label className={passwordError ? 'text-destructive' : ''} htmlFor='password'>Contraseña</Label>
               <Input
                 id='password'
                 type='password'

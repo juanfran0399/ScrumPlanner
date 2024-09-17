@@ -9,12 +9,13 @@ router.post('/login', async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      'SELECT * FROM Usuario WHERE username = ? AND contrasena = ?',
+      'SELECT user_id FROM Usuario WHERE username = ? AND contrasena = ?',
       [username, contrasena]
     )
 
     if (rows.length > 0) {
-      res.json({ success: true, user: rows[0] })
+      const user_id = rows[0].user_id
+      res.json({ success: true, user_id }) // Ensure the response contains user_id
     } else {
       res.status(401).json({ success: false, message: 'Invalid credentials' })
     }

@@ -63,18 +63,21 @@ export function DataTable<TData, TValue> ({
                     data-state={row.getIsSelected() && 'selected'}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
+                  </TableCell>
+                ))}
                   </TableRow>
                 ))
               )
             : (
               <TableRow>
                 <TableCell colSpan={columns.length} className='h-24 text-center'>
-                  No results.
-                </TableCell>
+      No results.
+              </TableCell>
               </TableRow>
               )}
         </TableBody>
@@ -153,29 +156,34 @@ const preguntas = [
 ]
 
 const EncuestaPage = () => {
-  const [selectedOptions, setSelectedOptions] = useState<{ [key: number]: string | null }>({})
+  const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [totalScore, setTotalScore] = useState<number | null>(null)
 
-  const handleOptionChange = (id: number, opcion: string) => {
-    setSelectedOptions((prev) => ({
+  const handleOptionChange = (id: number, score: number) => {
+    setSelectedScores((prev) => ({
       ...prev,
-      [id]: opcion
+      [id]: score
     }))
     setError(null)
   }
 
   const handleSubmit = () => {
-    const unanswered = preguntas.some(pregunta => !selectedOptions[pregunta.id])
+    const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
 
     if (unanswered) {
       setError('Por favor, responde todas las preguntas antes de enviar.')
       return
     }
 
+    // Calculate total score
+    const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
+    setTotalScore(score)
     setSubmitted(true)
     setError(null)
-    console.log('Form submitted. Answers:', selectedOptions)
+    console.log('Form submitted. Scores:', selectedScores)
+    console.log('Total score:', score)
   }
 
   // Columnas para DataTable
@@ -194,9 +202,9 @@ const EncuestaPage = () => {
                 type='radio'
                 name={`opcion_${row.original.id}`}
                 value={opcion}
-                checked={selectedOptions[row.original.id] === opcion}
+                checked={selectedScores[row.original.id] === 4 - index}
                 className='mr-2'
-                onChange={() => handleOptionChange(row.original.id, opcion)}
+                onChange={() => handleOptionChange(row.original.id, 4 - index)}
               />
               {opcion}
             </label>
@@ -228,20 +236,11 @@ const EncuestaPage = () => {
               Enviar
             </Button>
 
-            {/* Mostrar respuestas después de enviar */}
+            {/* Mostrar la puntuación después de enviar */}
             {submitted && !error && (
               <div className='mt-6'>
-                <h2 className='text-lg font-bold'>Tus respuestas:</h2>
-                <ul className='mt-2 ml-6 list-disc'>
-                  {Object.entries(selectedOptions).map(([id, respuesta]) => {
-                    const pregunta = preguntas.find((p) => p.id === Number(id))
-                    return (
-                      <li key={id}>
-                        <strong>{pregunta?.texto}</strong>: {respuesta}
-                      </li>
-                    )
-                  })}
-                </ul>
+                <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
+                <p className='text-xl'>{totalScore}</p>
               </div>
             )}
           </CardContent>
