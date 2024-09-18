@@ -44,7 +44,7 @@ const ScrumPoker = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Selecciona un proyecto, una tarea y una carta para priorizar tareas:</p>
+            <p>Selecciona un proyecto, una tarea y una carta para priorizar</p>
 
             {/* Selección de Proyecto */}
             <div className='flex flex-wrap gap-4'>
