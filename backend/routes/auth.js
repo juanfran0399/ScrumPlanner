@@ -4,7 +4,6 @@ import pool from '../database.js'
 const router = express.Router()
 
 // Authentication route
-// Authentication route
 router.post('/login', async (req, res) => {
   const { username, contrasena } = req.body
 

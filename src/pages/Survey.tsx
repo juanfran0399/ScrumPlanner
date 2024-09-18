@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import Layout from '@/components/Layout'
@@ -9,7 +11,6 @@ import {
   getCoreRowModel,
   useReactTable
 } from '@tanstack/react-table'
-
 import {
   Table,
   TableBody,
@@ -64,7 +65,10 @@ export function DataTable<TData, TValue> ({
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -153,30 +157,91 @@ const preguntas = [
 ]
 
 const EncuestaPage = () => {
-  const [selectedOptions, setSelectedOptions] = useState<{ [key: number]: string | null }>({})
+  const [searchParams] = useSearchParams()
+  const userId = searchParams.get('user_id')
+
+  const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [totalScore, setTotalScore] = useState<number | null>(null)
+  const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
 
-  const handleOptionChange = (id: number, opcion: string) => {
-    setSelectedOptions((prev) => ({
+  useEffect(() => {
+    const checkSurveyStatus = async () => {
+      const userIdAsInt = parseInt(userId || '0', 10)
+
+      try {
+        const response = await axios.post('http://localhost:5000/api/survey/chek', {
+          id_usuario: userIdAsInt
+        })
+
+        if (response.data.success) {
+          setAlreadySubmitted(true)
+        }
+      } catch (error) {
+        console.error('Error checking survey status:', error)
+        setError('Error checking survey status. Please try again.')
+      }
+    }
+
+    if (userId) {
+      checkSurveyStatus()
+    }
+  }, [userId])
+
+  const handleOptionChange = (id: number, score: number) => {
+    setSelectedScores((prev) => ({
       ...prev,
-      [id]: opcion
+      [id]: score
     }))
     setError(null)
   }
 
-  const handleSubmit = () => {
-    const unanswered = preguntas.some(pregunta => !selectedOptions[pregunta.id])
-
+  const handleSubmit = async () => {
+    const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
+  
     if (unanswered) {
       setError('Por favor, responde todas las preguntas antes de enviar.')
       return
     }
-
+  
+    // Calculate total score
+    const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
+    setTotalScore(score)
     setSubmitted(true)
     setError(null)
-    console.log('Form submitted. Answers:', selectedOptions)
+  
+    const userIdAsInt = parseInt(userId || '0', 10)
+  
+    try {
+      if (!alreadySubmitted) {
+        const response = await axios.post('http://localhost:5000/api/survey/survey', {
+          id_usuario: userIdAsInt,
+          puntaje: score
+        })
+  
+        if (!response.data.success) {
+          setError(response.data.message || 'Failed to submit survey data')
+        } else {
+          console.log('Survey data submitted successfully.')
+          // Refresh the page after successful submission
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000) // 1 second delay to ensure the submission is complete
+        }
+      } else {
+        console.log('Survey data already submitted.')
+      }
+    } catch (error) {
+      console.error('Error submitting survey:', error)
+      setError('Error al enviar la encuesta. Por favor, intenta nuevamente.')
+    }
+  
+    console.log('Form submitted. Scores:', selectedScores)
+    console.log('Total score:', score)
+    console.log('User ID:', userId)
   }
+  
 
   // Columnas para DataTable
   const columns: Array<ColumnDef<any>> = [
@@ -194,9 +259,9 @@ const EncuestaPage = () => {
                 type='radio'
                 name={`opcion_${row.original.id}`}
                 value={opcion}
-                checked={selectedOptions[row.original.id] === opcion}
+                checked={selectedScores[row.original.id] === 4 - index}
                 className='mr-2'
-                onChange={() => handleOptionChange(row.original.id, opcion)}
+                onChange={() => handleOptionChange(row.original.id, 4 - index)}
               />
               {opcion}
             </label>
@@ -214,35 +279,32 @@ const EncuestaPage = () => {
             <CardTitle>Encuesta de Satisfacción</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
+            {alreadySubmitted ? (
+              <p>Ya has completado esta encuesta. Gracias por tu participación.</p>
+            ) : (
+              <>
+                <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
 
-            {/* Tabla de Preguntas */}
-            <Separator className='my-4' />
-            <DataTable columns={columns} data={preguntas} />
+                {/* Tabla de Preguntas */}
+                <Separator className='my-4' />
+                <DataTable columns={columns} data={preguntas} />
 
-            {/* Mostrar error si hay preguntas sin responder */}
-            {error && <p className='mt-4 text-red-500'>{error}</p>}
+                {/* Mostrar error si hay preguntas sin responder */}
+                {error && <p className='mt-4 text-red-500'>{error}</p>}
 
-            {/* Enviar botón */}
-            <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
-              Enviar
-            </Button>
+                {/* Enviar botón */}
+                <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
+                  Enviar
+                </Button>
 
-            {/* Mostrar respuestas después de enviar */}
-            {submitted && !error && (
-              <div className='mt-6'>
-                <h2 className='text-lg font-bold'>Tus respuestas:</h2>
-                <ul className='mt-2 ml-6 list-disc'>
-                  {Object.entries(selectedOptions).map(([id, respuesta]) => {
-                    const pregunta = preguntas.find((p) => p.id === Number(id))
-                    return (
-                      <li key={id}>
-                        <strong>{pregunta?.texto}</strong>: {respuesta}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
+                {/* Mostrar la puntuación después de enviar */}
+                {submitted && !error && (
+                  <div className='mt-6'>
+                    <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
+                    <p className='text-xl'>{totalScore}</p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

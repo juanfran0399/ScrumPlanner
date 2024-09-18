@@ -49,5 +49,5 @@ export async function addSur (id_usuario, puntaje) {
   return result
 }
 
-const notes = await addSur('25', '35')
+const notes = await addSur('75', '135')
 console.log(notes)
