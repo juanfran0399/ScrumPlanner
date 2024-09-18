@@ -22,13 +22,13 @@ const Content = (): ReactNode => {
                 </div>
                 <p>Proyect Dashboard</p>
               </Link>
-              <Link to='/shipments' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/teams' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconBrandTeams size={64} stroke={2} />
                 </div>
                 <p>Equipos</p>
               </Link>
-              <Link to='/shipments' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/survey' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconUserQuestion size={64} stroke={2} />
                 </div>
@@ -45,14 +45,14 @@ const Content = (): ReactNode => {
                 <p>Scrum Poker</p>
               </Link>
 
-              <Link to='/events' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/planning' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconWriting size={64} stroke={2} />
                 </div>
                 <p>Planning</p>
               </Link>
 
-              <Link to='/events' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/retrospective' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconGraph size={64} stroke={2} />
                 </div>

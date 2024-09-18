@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificación con PyTorch y Flask</title>
+</head>
+<body>
+    <script src="./script.js"></script>
+    <h1>Clasificación con PyTorch y Flask</h1>
+
+    <!-- Formulario para ingresar los valores de entrada -->
+    <form id="predictionForm">
+        <label for="input1" value="1">Jose</label>
+        <input type="hidden" id="input1" value="0.8757, 0.6846, 0.764"><br>
+        <h4>Predicción: <span id="result1"></span></h4>
+
+        <label for="input2" value="2">Roberto</label>
+        <input type="hidden" id="input2" value="0.8757, 0.9846, 0.764"><br>
+        <h4>Predicción: <span id="result2"></span></h4>
+
+        <label for="input3" value="3">Rodrigo</label>
+        <input type="hidden" id="input3" value="0.8757, 0.6846, 0.964"><br>
+        <h4>Predicción: <span id="result3"></span></h4>
+
+        <label for="input4" value="4">Manuel</label>
+        <input type="hidden" id="input4" value="0.8757, 0.6846, 0.764"><br>
+        <h4>Predicción: <span id="result4"></span></h4>
+
+
+        <input type="button" id="bttn1" value="Enviar" onclick="modelos()"><br>
+
+        
+    </form>
+
+    <!-- Mostrar el resultado -->
+    <h4>Predicción: <span id="result"></span></h4>
+
+    <script>
+    </script>
+
+</body>
+</html>
