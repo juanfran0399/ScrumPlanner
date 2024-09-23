@@ -23,19 +23,19 @@ const Content = (): ReactNode => {
           <CardContent>
             <h1 className='mb-4 text-2xl'>Gestor de Proyectos</h1>
             <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-              <Link to={`/proyects?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/proyects' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconLayoutDashboard size={64} stroke={2} />
                 </div>
                 <p>Proyect Dashboard</p>
               </Link>
-              <Link to={`/teams?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/teams' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconBrandTeams size={64} stroke={2} />
                 </div>
                 <p>Equipos</p>
               </Link>
-              <Link to={`/survey?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/survey' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconUserQuestion size={64} stroke={2} />
                 </div>
@@ -45,28 +45,28 @@ const Content = (): ReactNode => {
             <Separator className='my-4' />
             <h1 className='mb-4 text-2xl'>Scrum</h1>
             <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-              <Link to={`/poker?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/poker' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconPokerChip size={64} stroke={2} />
                 </div>
                 <p>Scrum Poker</p>
               </Link>
 
-              <Link to={`/planning?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/planning' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconWriting size={64} stroke={2} />
                 </div>
                 <p>Planning</p>
               </Link>
 
-              <Link to={`/events?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/events' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconGraph size={64} stroke={2} />
                 </div>
                 <p>Retrospectiva</p>
               </Link>
 
-              <Link to={`/analysis?user_id=${userId}`} className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+              <Link to='/analysis' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
                 <div className='mx-auto'>
                   <IconAnalyze size={64} stroke={2} />
                 </div>

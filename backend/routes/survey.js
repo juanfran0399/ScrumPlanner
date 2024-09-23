@@ -48,6 +48,27 @@ router.post('/chek', async (req, res) => {
   }
 })
 
+router.post('/team', async (req, res) => {
+  const { name, description } = req.body
+
+  try {
+    // Execute the query to insert the survey data
+    const [result] = await pool.query(
+      'INSERT INTO Equipos (name, description) VALUES (?, ?)', [name, description]
+    )
+
+    // Check if any rows were affected
+    if (result.affectedRows > 0) {
+      res.json({ success: true, name, description })
+    } else {
+      res.status(400).json({ success: false, message: 'Failed to insert survey data' })
+    }
+  } catch (error) {
+    console.error('Error inserting survey data:', error)
+    res.status(500).json({ success: false, message: 'Internal server error' })
+  }
+})
+
 // Fetch survey data by id_usuario (GET)
 router.get('/survey/:id_usuario', async (req, res) => {
   const { id_usuario } = req.params

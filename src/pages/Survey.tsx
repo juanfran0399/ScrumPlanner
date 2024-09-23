@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import Layout from '@/components/Layout'
@@ -57,23 +56,21 @@ export function DataTable<TData, TValue> ({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows?.length
-            ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )
+            ? table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && 'selected'}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
             : (
               <TableRow>
                 <TableCell colSpan={columns.length} className='h-24 text-center'>
@@ -157,14 +154,13 @@ const preguntas = [
 ]
 
 const EncuestaPage = () => {
-  const [searchParams] = useSearchParams()
-  const userId = searchParams.get('user_id')
-
   const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [totalScore, setTotalScore] = useState<number | null>(null)
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
+
+  const userId = localStorage.getItem('id_usuario')
 
   useEffect(() => {
     const checkSurveyStatus = async () => {
@@ -199,35 +195,33 @@ const EncuestaPage = () => {
 
   const handleSubmit = async () => {
     const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
-  
+
     if (unanswered) {
       setError('Por favor, responde todas las preguntas antes de enviar.')
       return
     }
-  
-    // Calculate total score
+
     const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
     setTotalScore(score)
     setSubmitted(true)
     setError(null)
-  
+
     const userIdAsInt = parseInt(userId || '0', 10)
-  
+
     try {
       if (!alreadySubmitted) {
         const response = await axios.post('http://localhost:5000/api/survey/survey', {
           id_usuario: userIdAsInt,
           puntaje: score
         })
-  
+
         if (!response.data.success) {
           setError(response.data.message || 'Failed to submit survey data')
         } else {
           console.log('Survey data submitted successfully.')
-          // Refresh the page after successful submission
           setTimeout(() => {
             window.location.reload()
-          }, 1000) // 1 second delay to ensure the submission is complete
+          }, 1000)
         }
       } else {
         console.log('Survey data already submitted.')
@@ -236,12 +230,7 @@ const EncuestaPage = () => {
       console.error('Error submitting survey:', error)
       setError('Error al enviar la encuesta. Por favor, intenta nuevamente.')
     }
-  
-    console.log('Form submitted. Scores:', selectedScores)
-    console.log('Total score:', score)
-    console.log('User ID:', userId)
   }
-  
 
   // Columnas para DataTable
   const columns: Array<ColumnDef<any>> = [
@@ -279,33 +268,31 @@ const EncuestaPage = () => {
             <CardTitle>Encuesta de Satisfacción</CardTitle>
           </CardHeader>
           <CardContent>
-            {alreadySubmitted ? (
-              <p>Ya has completado esta encuesta. Gracias por tu participación.</p>
-            ) : (
-              <>
-                <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
+            {alreadySubmitted
+              ? (
+                <p>Ya has completado esta encuesta. Gracias por tu participación.</p>
+                )
+              : (
+                <>
+                  <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
 
-                {/* Tabla de Preguntas */}
-                <Separator className='my-4' />
-                <DataTable columns={columns} data={preguntas} />
+                  <Separator className='my-4' />
+                  <DataTable columns={columns} data={preguntas} />
 
-                {/* Mostrar error si hay preguntas sin responder */}
-                {error && <p className='mt-4 text-red-500'>{error}</p>}
+                  {error && <p className='mt-4 text-red-500'>{error}</p>}
 
-                {/* Enviar botón */}
-                <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
-                  Enviar
-                </Button>
+                  <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
+                    Enviar
+                  </Button>
 
-                {/* Mostrar la puntuación después de enviar */}
-                {submitted && !error && (
-                  <div className='mt-6'>
-                    <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
-                    <p className='text-xl'>{totalScore}</p>
-                  </div>
+                  {submitted && !error && (
+                    <div className='mt-6'>
+                      <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
+                      <p className='text-xl'>{totalScore}</p>
+                    </div>
+                  )}
+                </>
                 )}
-              </>
-            )}
           </CardContent>
         </Card>
       </div>

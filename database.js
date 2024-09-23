@@ -34,8 +34,8 @@ export async function getId (Test) {
   return rows
 }
 
-export async function addId (Test) {
-  const result = await pool.query('INSERT INTO Test (Test) VALUES (?)', [Test])
+export async function addId (name, description) {
+  const result = await pool.query('INSERT INTO Equipos (name, description) VALUES (?, ?)', [name, description])
   return result
 }
 
@@ -49,5 +49,5 @@ export async function addSur (id_usuario, puntaje) {
   return result
 }
 
-const notes = await addSur('75', '135')
+const notes = await addId('Test', '135')
 console.log(notes)

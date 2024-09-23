@@ -3,107 +3,105 @@ import pool from '../database.js'
 
 const router = express.Router()
 
-// Get all teams and user data (GET)
-router.get('/', async (req, res) => {
-  const { user_id } = req.query
+// New route to add a team directly using addId
+router.post('/add', async (req, res) => {
+  const { name, description } = req.body
 
   try {
-    const [teams] = await pool.query('SELECT * FROM teams')
+    const result = await pool.query(
+      'INSERT INTO Equipos (name, description) VALUES (?, ?)', [name, description]
+    )
+    console.log('Insert result:', result) // Debug log
+    const insertId = result[0].insertId
 
-    if (users.length > 0) {
-      res.json({ teams, user: users[0] })
-    } else {
-      res.status(404).json({ success: false, message: 'User not found' })
-    }
+    res.status(201).json({ message: 'Team added successfully', teamId: insertId })
   } catch (error) {
-    console.error('Error fetching teams and user data:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    console.error('Error adding team:', error)
+    res.status(500).json({ error: 'An error occurred while adding the team.' })
   }
 })
 
-// Join a team (POST)
+// Route to join a team
 router.post('/join', async (req, res) => {
-  const { userId, teamId } = req.body
+  console.log('Joining team with:', req.body)
+  const { team_id, user_id } = req.body
 
   try {
-    const [team] = await pool.query('SELECT * FROM teams WHERE id = ?', [teamId])
-    const [user] = await pool.query('SELECT * FROM users WHERE id = ?', [userId])
+    // Check if the user is already a member of the team
+    const [existingMember] = await pool.query(
+      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ?',
+      [team_id, user_id]
+    )
 
-    if (team.length > 0 && user.length > 0) {
-      await pool.query('UPDATE users SET team_id = ? WHERE id = ?', [teamId, userId])
-      await pool.query('UPDATE teams SET members_count = members_count + 1 WHERE id = ?', [teamId])
-      res.json({ success: true, message: 'User joined team' })
-    } else {
-      res.status(404).json({ success: false, message: 'User or team not found' })
+    if (existingMember.length > 0) {
+      return res.status(400).json({ message: 'User is already a member of this team.' })
     }
+
+    // Add the user to the team
+    const result = await pool.query(
+      'INSERT INTO Miembros (team_id, user_id) VALUES (?, ?)',
+      [team_id, user_id]
+    )
+
+    console.log('Join result:', result) // Debug log
+    res.status(201).json({ message: 'User joined the team successfully' })
   } catch (error) {
     console.error('Error joining team:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    res.status(500).json({ error: 'An error occurred while joining the team.' })
   }
 })
 
-// Leave a team (POST)
-router.post('/leave', async (req, res) => {
-  const { userId } = req.body
-
+// Route to get all available teams
+router.get('/all', async (req, res) => {
   try {
-    const [user] = await pool.query('SELECT * FROM users WHERE id = ?', [userId])
-
-    if (user.length > 0 && user[0].team_id) {
-      const teamId = user[0].team_id
-      await pool.query('UPDATE users SET team_id = NULL WHERE id = ?', [userId])
-      await pool.query('UPDATE teams SET members_count = members_count - 1 WHERE id = ?', [teamId])
-      res.json({ success: true, message: 'User left team' })
-    } else {
-      res.status(404).json({ success: false, message: 'User not found or not in a team' })
-    }
+    const [teams] = await pool.query('SELECT * FROM Equipos')
+    console.log('Teams from database:', teams) // Log the fetched teams
+    res.status(200).json({ teams })
   } catch (error) {
-    console.error('Error leaving team:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    console.error('Error fetching teams:', error)
+    res.status(500).json({ error: 'An error occurred while fetching the teams.' })
   }
 })
 
-// Delete a team (DELETE)
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params
-  const { userId } = req.body
+// New route to get team members' names
+router.get('/members/:teamId', async (req, res) => {
+  const { teamId } = req.params
 
   try {
-    const [user] = await pool.query('SELECT * FROM users WHERE id = ?', [userId])
+    const [members] = await pool.query(`
+      SELECT U.nombre
+      FROM Miembros M
+      JOIN Usuario U ON M.user_id = U.id_usuario
+      WHERE M.team_id = ?`, [teamId]
+    )
 
-    if (user.length > 0 && user[0].team_id == id) {
-      await pool.query('UPDATE users SET team_id = NULL WHERE id = ?', [userId])
-    }
-
-    const [result] = await pool.query('DELETE FROM teams WHERE id = ?', [id])
-
-    if (result.affectedRows > 0) {
-      res.json({ success: true, message: 'Team deleted' })
-    } else {
-      res.status(404).json({ success: false, message: 'Team not found' })
-    }
+    console.log('Team members:', members) // Debug log
+    res.status(200).json({ members })
   } catch (error) {
-    console.error('Error deleting team:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    console.error('Error fetching team members:', error)
+    res.status(500).json({ error: 'An error occurred while fetching team members.' })
   }
 })
 
-// Create a team (POST)
-router.post('/create', async (req, res) => {
-  const { userId, name } = req.body
+// Route to exit a team
+router.post('/exit', async (req, res) => {
+  const { team_id, user_id } = req.body
 
   try {
-    const [result] = await pool.query('INSERT INTO teams (name, members_count) VALUES (?, ?)', [name, 1])
+    const result = await pool.query(
+      'DELETE FROM Miembros WHERE team_id = ? AND user_id = ?',
+      [team_id, user_id]
+    )
 
-    if (result.affectedRows > 0) {
-      await pool.query('UPDATE users SET team_id = ? WHERE id = ?', [result.insertId, userId])
-      res.status(201).json({ success: true, message: 'Team created' })
-    } else {
-      res.status(400).json({ success: false, message: 'Failed to create team' })
+    if (result.affectedRows === 0) {
+      return res.status(400).json({ message: 'User is not a member of this team.' })
     }
+
+    console.log('Exit team result:', result) // Debug log
+    res.status(200).json({ message: 'User exited the team successfully' })
   } catch (error) {
-    console.error('Error creating team:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    console.error('Error exiting team:', error)
+    res.status(500).json({ error: 'An error occurred while exiting the team.' })
   }
 })
 
