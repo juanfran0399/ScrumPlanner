@@ -100,8 +100,7 @@ const Teams = () => {
       const response = await axios.post('http://localhost:5000/api/team/join', {
         team_id: teamId,
         user_id: userId,
-        pass: joinTeamPassword,
-        active: 1 // Use the join password for joining a team
+        pass: joinTeamPassword
       })
       if (response.data.success) {
         alert('Successfully joined the team!')
@@ -125,19 +124,28 @@ const Teams = () => {
       alert('Please select a team to exit.')
       return
     }
-
     const teamId = parseInt(selectedTeam, 10)
-
     try {
+      // Make the API request to exit the team
       const response = await axios.post('http://localhost:5000/api/team/exit', { team_id: teamId, user_id: userId })
-      alert('You don\'t exist in the team!')
-      setSelectedTeam('') // Clear selected team
-      setTeamMembers([]) // Clear team members after exiting
-      // Refresh the page after exiting the team
-      window.location.reload()
+
+      // Check if the exit was successful
+      if (response.data.success) {
+        alert('Successfully exited the team.')
+        setSelectedTeam('') // Clear selected team
+        setTeamMembers([]) // Clear team members after exiting
+        // Refresh the page after exiting the team
+        window.location.reload()
+      } else {
+        alert(response.data.message || 'Failed to exit the team.')
+      }
     } catch (error) {
       console.error('Error exiting team:', error)
-      alert('Failed to exit the team.')
+      if (error.response && error.response.status === 400) {
+        alert('You are not an active member of this team.')
+      } else {
+        alert('Failed to exit the team.')
+      }
     }
   }
 

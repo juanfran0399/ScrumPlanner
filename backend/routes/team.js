@@ -24,13 +24,13 @@ router.post('/add', async (req, res) => {
 // Route to join a team
 router.post('/join', async (req, res) => {
   console.log('Joining team with:', req.body)
-  const { team_id, user_id, pass, active } = req.body
+  const { team_id, user_id, pass } = req.body
 
   try {
     // Check if the user is already a member of the team
     const [existingMember] = await pool.query(
-      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ? AND active = "?"',
-      [team_id, user_id, active]
+      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ? AND active = "1"',
+      [team_id, user_id]
     )
 
     if (existingMember.length > 0) {
@@ -38,7 +38,7 @@ router.post('/join', async (req, res) => {
     }
 
     const [team] = await pool.query(
-      'SELECT * FROM Equipos WHERE team_id = ? AND password = ?',
+      'SELECT * FROM Equipos WHERE team_id = ? AND pass = ?',
       [team_id, pass]
     )
 
@@ -47,8 +47,8 @@ router.post('/join', async (req, res) => {
     }
     // If the team exists, insert the user into the Miembros table
     await pool.query(
-      'INSERT INTO Miembros (team_id, user_id, active) VALUES (?, ?, ?)',
-      [team_id, user_id, active]
+      'INSERT INTO Miembros (team_id, user_id, active) VALUES (?, ?, 1)',
+      [team_id, user_id]
     )
 
     return res.json({ success: true, message: 'Successfully joined the team!' })
@@ -77,9 +77,9 @@ router.get('/members/:teamId', async (req, res) => {
   try {
     const [members] = await pool.query(`
       SELECT U.nombre
-      FROM Miembros M
+      FROM Miembros M 
       JOIN Usuario U ON M.user_id = U.id_usuario
-      WHERE M.team_id = ?`, [teamId]
+      WHERE M.team_id = ? AND M.active = 1`, [teamId]
     )
 
     console.log('Team members:', members) // Debug log
@@ -91,24 +91,31 @@ router.get('/members/:teamId', async (req, res) => {
 })
 
 // Route to exit a team
+// Route to exit a team
 router.post('/exit', async (req, res) => {
   const { team_id, user_id } = req.body
 
   try {
-    const result = await pool.query(
-      'DELETE FROM Miembros WHERE team_id = ? AND user_id = ?',
+    // Check if the user is currently an active member of the team
+    const [existingMember] = await pool.query(
+      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ? AND active = 1',
       [team_id, user_id]
     )
 
-    if (result.affectedRows === 0) {
-      return res.status(400).json({ message: 'User is not a member of this team.' })
+    if (existingMember.length === 0) {
+      return res.status(400).json({ message: 'User is already not an active member of this team.' })
     }
 
-    console.log('Exit team result:', result) // Debug log
-    res.status(200).json({ message: 'User exited the team successfully' })
+    // Set active to 0, marking the user as inactive in the team
+    await pool.query(
+      'UPDATE Miembros SET active = 0 WHERE team_id = ? AND user_id = ?',
+      [team_id, user_id]
+    )
+
+    return res.json({ success: true, message: 'Successfully left the team!' })
   } catch (error) {
-    console.error('Error exiting team:', error)
-    res.status(500).json({ error: 'An error occurred while exiting the team.' })
+    console.error('Error leaving the team:', error)
+    return res.status(500).json({ success: false, message: 'An error occurred while leaving the team.' })
   }
 })
 
