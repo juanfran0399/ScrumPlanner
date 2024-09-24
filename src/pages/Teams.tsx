@@ -8,8 +8,10 @@ const Teams = () => {
   const [userId, setUserId] = useState(null)
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
+  const [newTeamPassword, setNewTeamPassword] = useState('') // New state for password
   const [creatingTeam, setCreatingTeam] = useState(false)
   const [joiningTeam, setJoiningTeam] = useState(false)
+  const [joinTeamPassword, setJoinTeamPassword] = useState('')
   const [availableTeams, setAvailableTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState('')
   const [teamMembers, setTeamMembers] = useState([])
@@ -60,15 +62,20 @@ const Teams = () => {
   const createTeam = async () => {
     try {
       setCreatingTeam(true)
+
+      // Log the password to ensure it's being captured
+      console.log('Password:', newTeamPassword)
       const response = await axios.post('http://localhost:5000/api/team/add', {
         name: newTeamName,
-        description: newTeamDescription
+        description: newTeamDescription,
+        pass: newTeamPassword // Include the password in the request
       })
 
       if (response.data.success) {
         alert('Team added successfully!')
         setNewTeamName('')
         setNewTeamDescription('')
+        setNewTeamPassword('') // Clear the password field
         setTeamMembers([]) // Clear team members after creating a team
         // Refresh the page after creating the team
         window.location.reload()
@@ -92,21 +99,21 @@ const Teams = () => {
       setJoiningTeam(true)
       const response = await axios.post('http://localhost:5000/api/team/join', {
         team_id: teamId,
-        user_id: userId
+        user_id: userId,
+        pass: joinTeamPassword,
+        active: 1 // Use the join password for joining a team
       })
       if (response.data.success) {
         alert('Successfully joined the team!')
         localStorage.setItem('team_id', teamId)
         window.location.reload()
         setSelectedTeam('')
-        setTeamMembers([]) // Clear members on successful join
-        // Refresh the page after joining the team
+        setTeamMembers([])
       } else {
         alert(response.data.message || 'Unable to join the team.')
       }
     } catch (error) {
       console.error('Error joining team:', error)
-      alert('Already part of the team!')
       window.location.reload()
     } finally {
       setJoiningTeam(false)
@@ -123,7 +130,7 @@ const Teams = () => {
 
     try {
       const response = await axios.post('http://localhost:5000/api/team/exit', { team_id: teamId, user_id: userId })
-      alert('You dont exist in the team!')
+      alert('You don\'t exist in the team!')
       setSelectedTeam('') // Clear selected team
       setTeamMembers([]) // Clear team members after exiting
       // Refresh the page after exiting the team
@@ -159,6 +166,13 @@ const Teams = () => {
             onChange={(e) => setNewTeamDescription(e.target.value)}
             className='w-full p-2 mt-2 text-black border border-gray-300'
           />
+          <input
+            type='password'
+            placeholder='Enter team password'
+            value={newTeamPassword}
+            onChange={(e) => setNewTeamPassword(e.target.value)} // Make sure this captures the input
+            className='w-full p-2 mt-2 text-black border border-gray-300'
+          />
           <Button
             className='mt-4'
             onClick={createTeam}
@@ -173,45 +187,50 @@ const Teams = () => {
         {/* Join Team Section */}
         <div className='mt-4'>
           <h2 className='text-xl font-bold'>Team Options</h2>
-          {availableTeams.length > 0
-            ? (
-              <div>
-                <select
-                  value={selectedTeam}
-                  onChange={(e) => {
-                    const selectedValue = e.target.value
-                    setSelectedTeam(selectedValue)
-                    if (selectedValue) {
-                      localStorage.setItem('team_id', selectedValue) // Store team_id in localStorage
-                    }
-                  }}
-                  className='w-full p-2 mt-2 text-black border border-gray-300'
+          {availableTeams.length > 0 ? (
+            <div>
+              <select
+                value={selectedTeam}
+                onChange={(e) => {
+                  const selectedValue = e.target.value
+                  setSelectedTeam(selectedValue)
+                  if (selectedValue) {
+                    localStorage.setItem('team_id', selectedValue)
+                  }
+                }}
+                className='w-full p-2 mt-2 text-black border border-gray-300'
+              >
+                <option value=''>Select a team</option>
+                {availableTeams.map((team) => (
+                  <option key={team.teamId} value={team.teamId}>
+                    {team.team_id} - {team.name} - {team.description}
+                  </option>
+                ))}
+              </select>
+
+              {/* Join Password Input */}
+              <input
+                type='password'
+                placeholder='Enter join password'
+                value={joinTeamPassword}
+                onChange={(e) => setJoinTeamPassword(e.target.value)}
+                className='w-full p-2 mt-2 text-black border border-gray-300'
+              />
+
+              <div className='flex mt-4 space-x-4'>
+                <Button onClick={joinTeam} disabled={joiningTeam || !selectedTeam}>
+                  {joiningTeam ? 'Joining Team...' : 'Join Team'}
+                </Button>
+
+                <Button
+                  onClick={handleExitTeam}
+                  disabled={!selectedTeam}
                 >
-                  <option value=''>Select a team</option>
-                  {availableTeams.map((team) => (
-                    <option key={team.teamId} value={team.teamId}>
-                      {team.team_id} - {team.name} - {team.description}
-                    </option>
-                  ))}
-                </select>
-
-                <div className='flex mt-4 space-x-4'> {/* Added space between buttons */}
-                  <Button
-                    onClick={joinTeam}
-                    disabled={joiningTeam || !selectedTeam}
-                  >
-                    {joiningTeam ? 'Joining Team...' : 'Join Team'}
-                  </Button>
-
-                  <Button
-                    onClick={handleExitTeam}
-                    disabled={!selectedTeam} // Disable if no team is selected
-                  >
-                    Exit Team
-                  </Button>
-                </div>
+                  Exit Team
+                </Button>
               </div>
-              )
+            </div>
+          )
             : (
               <p>No teams are available to join.</p>
               )}

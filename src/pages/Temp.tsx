@@ -59,10 +59,10 @@ export function DataTable<TData, TValue> ({
             ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-              >
-                {row.getVisibleCells().map((cell) => (
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                  >
+                    {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(
                       cell.column.columnDef.cell,
@@ -70,15 +70,15 @@ export function DataTable<TData, TValue> ({
                     )}
                   </TableCell>
                 ))}
-              </TableRow>
+                  </TableRow>
                 ))
               )
             : (
               <TableRow>
-    <TableCell colSpan={columns.length} className='h-24 text-center'>
-                No results.
+                <TableCell colSpan={columns.length} className='h-24 text-center'>
+      No results.
               </TableCell>
-  </TableRow>
+              </TableRow>
               )}
         </TableBody>
       </Table>

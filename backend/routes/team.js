@@ -5,11 +5,11 @@ const router = express.Router()
 
 // New route to add a team directly using addId
 router.post('/add', async (req, res) => {
-  const { name, description } = req.body
+  const { name, description, pass } = req.body
 
   try {
     const result = await pool.query(
-      'INSERT INTO Equipos (name, description) VALUES (?, ?)', [name, description]
+      'INSERT INTO Equipos (name, description, pass) VALUES (?, ?, ?)', [name, description, pass]
     )
     console.log('Insert result:', result) // Debug log
     const insertId = result[0].insertId
@@ -24,30 +24,37 @@ router.post('/add', async (req, res) => {
 // Route to join a team
 router.post('/join', async (req, res) => {
   console.log('Joining team with:', req.body)
-  const { team_id, user_id } = req.body
+  const { team_id, user_id, pass, active } = req.body
 
   try {
     // Check if the user is already a member of the team
     const [existingMember] = await pool.query(
-      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ?',
-      [team_id, user_id]
+      'SELECT * FROM Miembros WHERE team_id = ? AND user_id = ? AND active = "?"',
+      [team_id, user_id, active]
     )
 
     if (existingMember.length > 0) {
       return res.status(400).json({ message: 'User is already a member of this team.' })
     }
 
-    // Add the user to the team
-    const result = await pool.query(
-      'INSERT INTO Miembros (team_id, user_id) VALUES (?, ?)',
-      [team_id, user_id]
+    const [team] = await pool.query(
+      'SELECT * FROM Equipos WHERE team_id = ? AND password = ?',
+      [team_id, pass]
     )
 
-    console.log('Join result:', result) // Debug log
-    res.status(201).json({ message: 'User joined the team successfully' })
+    if (team.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid team ID or password.' })
+    }
+    // If the team exists, insert the user into the Miembros table
+    await pool.query(
+      'INSERT INTO Miembros (team_id, user_id, active) VALUES (?, ?, ?)',
+      [team_id, user_id, active]
+    )
+
+    return res.json({ success: true, message: 'Successfully joined the team!' })
   } catch (error) {
     console.error('Error joining team:', error)
-    res.status(500).json({ error: 'An error occurred while joining the team.' })
+    return res.status(500).json({ success: false, message: 'An error occurred while joining the team.' })
   }
 })
 
