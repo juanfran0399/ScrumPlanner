@@ -14,6 +14,7 @@ import Survey from './pages/Survey'
 import Planning from './pages/Planning'
 import Teams from './pages/Teams'
 import Analysis from './pages/Analysis'
+import Retrospective from './pages/Retrospective'
 
 const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: 'analysis',
         element: <Analysis />
+      },
+      {
+        path: 'retrospective',
+        element: <Retrospective />
       }
     ]
   }
