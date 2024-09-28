@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { IconHome, IconMenu2, IconPackage, IconSettings, IconLocationSearch, IconLogout2, IconUser, IconTimelineEventFilled, IconTimelineEvent, IconTimelineEventX, IconCalendarEvent, IconTimelineEventPlus, IconTruckLoading, IconTruckReturn, IconTruckDelivery, IconImageInPicture, IconDashboard, IconLayoutDashboard, IconBrandTeams, IconUserQuestion, IconPokerChip, IconWriting, IconBackspace } from '@tabler/icons-react'
+import { IconHome, IconMenu2, IconPackage, IconSettings, IconLocationSearch, IconLogout2, IconUser, IconTimelineEventFilled, IconTimelineEvent, IconTimelineEventX, IconCalendarEvent, IconTimelineEventPlus, IconTruckLoading, IconTruckReturn, IconTruckDelivery, IconImageInPicture, IconDashboard, IconLayoutDashboard, IconBrandTeams, IconUserQuestion, IconPokerChip, IconWriting, IconBackspace, IconCapProjecting } from '@tabler/icons-react'
 import defaultUser from '@/assets/images/default-user.png'
 import LayoutProps from '@/types/Layout'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction, AlertDialogHeader, AlertDialogFooter } from './ui/alert-dialog'
@@ -115,6 +115,18 @@ const Layout = ({ children }: LayoutProps): JSX.Element => {
               </Link>
             </TooltipTrigger>
             <TooltipContent side='right'>Retrospectiva</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to='/projection'
+                className='flex items-center justify-center transition-colors rounded-lg h-9 w-9 text-muted-foreground hover:text-foreground md:h-8 md:w-8'
+              >
+                <IconCapProjecting className='w-5 h-5' />
+                <span className='sr-only'>Projection</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side='right'>Projection</TooltipContent>
           </Tooltip>
         </nav>
         <nav className='flex flex-col items-center gap-4 px-2 mt-auto sm:py-4'>

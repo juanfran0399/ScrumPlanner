@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Separator } from '@/components/ui/separator'
 import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import axios from 'axios'
 
 const Teams = () => {
@@ -160,26 +161,26 @@ const Teams = () => {
 
         <div className='mt-4'>
           <h2 className='text-xl font-bold'>Add a New Team</h2>
-          <input
+          <Input
             type='text'
             placeholder='Enter team name'
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
-            className='w-full p-2 mt-2 text-black border border-gray-300'
+            className='w-full p-2 mt-2'
           />
-          <input
+          <Input
             type='text'
             placeholder='Enter team description'
             value={newTeamDescription}
             onChange={(e) => setNewTeamDescription(e.target.value)}
-            className='w-full p-2 mt-2 text-black border border-gray-300'
+            className='w-full p-2 mt-2'
           />
-          <input
+          <Input
             type='password'
             placeholder='Enter team password'
             value={newTeamPassword}
             onChange={(e) => setNewTeamPassword(e.target.value)} // Make sure this captures the input
-            className='w-full p-2 mt-2 text-black border border-gray-300'
+            className='w-full p-2 mt-2'
           />
           <Button
             className='mt-4'
@@ -217,7 +218,7 @@ const Teams = () => {
               </select>
 
               {/* Join Password Input */}
-              <input
+              <Input
                 type='password'
                 placeholder='Enter join password'
                 value={joinTeamPassword}

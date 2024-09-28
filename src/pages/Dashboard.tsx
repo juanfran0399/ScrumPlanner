@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { IconAnalyze, IconBrandTeams, IconGraph, IconLayoutDashboard, IconPokerChip, IconUserQuestion, IconWriting } from '@tabler/icons-react'
+import { IconAnalyze, IconBrandTeams, IconCapProjecting, IconGraph, IconLayoutDashboard, IconPokerChip, IconUserQuestion, IconWriting } from '@tabler/icons-react'
 import { Link } from 'react-router-dom'
 
 const Content = (): ReactNode => {
@@ -71,6 +71,13 @@ const Content = (): ReactNode => {
                   <IconAnalyze size={64} stroke={2} />
                 </div>
                 <p>Análisis</p>
+              </Link>
+
+              <Link to='/projection' className='flex flex-col justify-between p-6 font-semibold text-center transition-all border rounded-lg shadow-lg bg-muted/25 hover:bg-muted/50'>
+                <div className='mx-auto'>
+                  <IconCapProjecting size={64} stroke={2} />
+                </div>
+                <p>Projection</p>
               </Link>
             </div>
           </CardContent>
