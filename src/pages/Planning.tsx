@@ -1,4 +1,5 @@
-import React, { useState, FormEvent } from 'react'
+import React, { useState, useEffect, FormEvent } from 'react'
+import axios from 'axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,6 +17,7 @@ interface Task {
 }
 
 interface Sprint {
+  id: number
   title: string
   start_date: string
   end_date: string
@@ -23,37 +25,8 @@ interface Sprint {
   tasks: Task[]
 }
 
-const initialSprints: Sprint[] = [
-  {
-    title: 'Sprint 1',
-    start_date: '2024-08-05',
-    end_date: '2024-08-19',
-    objectives: 'Desarrollar la funcionalidad de usuario y autenticación.',
-    tasks: [
-      { task: 'Implementar registro de usuario', assignee: 'Juan Pérez', status: 'Pendiente' },
-      { task: 'Implementar inicio de sesión', assignee: 'Ana López', status: 'En Progreso' },
-      { task: 'Crear perfil de usuario', assignee: 'Carlos Torres', status: 'Pendiente' },
-      { task: 'Agregar recuperación de contraseña', assignee: 'Lucía Martínez', status: 'Pendiente' },
-      { task: 'Configurar autenticación de dos factores', assignee: 'Fernando Díaz', status: 'Pendiente' }
-    ]
-  },
-  {
-    title: 'Sprint 2',
-    start_date: '2024-08-20',
-    end_date: '2024-09-03',
-    objectives: 'Desarrollar la funcionalidad de pagos y reportes.',
-    tasks: [
-      { task: 'Implementar pasarela de pagos', assignee: 'Luis Gómez', status: 'Pendiente' },
-      { task: 'Desarrollar módulo de reportes', assignee: 'María López', status: 'Pendiente' },
-      { task: 'Agregar historial de transacciones', assignee: 'Pedro Jiménez', status: 'Pendiente' },
-      { task: 'Configurar notificaciones de pago', assignee: 'Sara Ortega', status: 'Pendiente' },
-      { task: 'Realizar pruebas de integración de pagos', assignee: 'José Hernández', status: 'Pendiente' }
-    ]
-  }
-]
-
 const SprintPlanning: React.FC = () => {
-  const [sprints, setSprints] = useState<Sprint[]>(initialSprints)
+  const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
   const [newTask, setNewTask] = useState<string>('')
   const [assignee, setAssignee] = useState<string>('')
@@ -61,52 +34,120 @@ const SprintPlanning: React.FC = () => {
   const [newSprintTitle, setNewSprintTitle] = useState<string>('')
   const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
   const [newSprintEndDate, setNewSprintEndDate] = useState<string>('')
+  const [teamId, setTeamId] = useState<number | null>(null)
+  const [userId, setUserId] = useState<number | null>(null)
 
-  const currentSprint = sprints[selectedSprintIndex]
+  // Retrieve user_id from localStorage when the component mounts
+  useEffect(() => {
+    const storedUserId = parseInt(localStorage.getItem('id_usuario') || '0', 10)
+    if (storedUserId) {
+      setUserId(storedUserId)
+    }
+  }, [])
 
-  const handleAddTask = (event: FormEvent<HTMLFormElement>) => {
+  // Fetch team_id using the user_id and store it in localStorage
+  useEffect(() => {
+    const fetchTeamId = async () => {
+      if (userId) {
+        try {
+          const response = await axios.get(`http://localhost:5000/api/sprint/team/${userId}`)
+          const fetchedTeamId = response.data.team_id
+          setTeamId(fetchedTeamId)
+          localStorage.setItem('team_id', fetchedTeamId.toString())
+          fetchSprints(fetchedTeamId) // Fetch sprints after getting the team_id
+        } catch (error) {
+          console.error('Error fetching team_id:', error)
+        }
+      }
+    }
+    fetchTeamId()
+  }, [userId])
+
+  const currentSprint = sprints[selectedSprintIndex] || null // Handle undefined case
+
+  // Fetch all sprints from the backend
+  const fetchSprints = async (teamId: number) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+      setSprints(response.data.sprints)
+    } catch (error) {
+      console.error('Error fetching sprints:', error)
+    }
+  }
+
+  const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (currentSprint) {
-      const updatedSprint = { ...currentSprint, tasks: [...currentSprint.tasks, { task: newTask, assignee, status: 'Pendiente' }] }
-      setSprints(sprints.map((sprint, index) => (index === selectedSprintIndex ? updatedSprint : sprint)))
+    if (!currentSprint) return // Ensure currentSprint is defined
+    try {
+      const response = await axios.post('http://localhost:5000/api/sprint/add-task', {
+        sprint_id: currentSprint.id,
+        task: newTask,
+        user_id: userId,
+        status: 'Pendiente',
+        active: true
+      })
+
+      setSprints(sprints.map((sprint, index) =>
+        index === selectedSprintIndex ? { ...sprint, tasks: [...(sprint.tasks || []), response.data] } : sprint
+      ))
+
       setNewTask('')
       setAssignee('')
+    } catch (error) {
+      console.error('Error adding task:', error)
     }
   }
 
   const handleDeleteTask = (index: number) => {
     if (currentSprint) {
       const updatedSprint = { ...currentSprint }
+      updatedSprint.tasks = updatedSprint.tasks ? [...updatedSprint.tasks] : []
       updatedSprint.tasks.splice(index, 1)
       setSprints(sprints.map((sprint, i) => (i === selectedSprintIndex ? updatedSprint : sprint)))
     }
   }
 
-  const handleUpdateObjectives = (event: FormEvent<HTMLFormElement>) => {
+  const handleUpdateObjectives = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (currentSprint) {
-      const updatedSprint = { ...currentSprint, objectives }
-      setSprints(sprints.map((sprint, index) => (index === selectedSprintIndex ? updatedSprint : sprint)))
+    if (!currentSprint) return // Ensure currentSprint is defined
+    try {
+      await axios.put('http://localhost:5000/api/sprint/update-objective', {
+        sprint_id: currentSprint.id,
+        objective: objectives
+      })
+
+      setSprints(sprints.map((sprint, index) =>
+        index === selectedSprintIndex ? { ...sprint, objectives } : sprint
+      ))
+    } catch (error) {
+      console.error('Error updating objectives:', error)
     }
   }
 
-  const handleAddSprint = (event: FormEvent<HTMLFormElement>) => {
+  const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const newSprint: Sprint = {
-      title: newSprintTitle,
-      start_date: newSprintStartDate,
-      end_date: newSprintEndDate,
-      objectives: '',
-      tasks: []
+    try {
+      const response = await axios.post('http://localhost:5000/api/sprint/add-sprint', {
+        user_id: userId,
+        team_id: teamId,
+        title: newSprintTitle,
+        start_date: newSprintStartDate,
+        end_date: newSprintEndDate
+      })
+
+      setSprints([...sprints, response.data])
+      setNewSprintTitle('')
+      setNewSprintStartDate('')
+      setNewSprintEndDate('')
+    } catch (error) {
+      console.error('Error adding sprint:', error)
     }
-    setSprints([...sprints, newSprint])
-    setNewSprintTitle('')
-    setNewSprintStartDate('')
-    setNewSprintEndDate('')
   }
 
   // Gráfica de tareas completadas por estado
   const getChartData = () => {
+    if (!currentSprint || !currentSprint.tasks) return { labels: [], datasets: [] } // Handle undefined case
+
     const labels = ['Pendiente', 'En Progreso', 'Completada']
     const taskCounts = labels.map(status => currentSprint.tasks.filter(task => task.status === status).length)
 
@@ -119,9 +160,9 @@ const SprintPlanning: React.FC = () => {
           backgroundColor: 'rgba(75, 192, 192, 0.6)',
           borderColor: 'rgba(75, 192, 192, 1)',
           borderWidth: 1
-        }
+        },
       ]
-    }
+    };
   }
 
   return (
@@ -139,11 +180,15 @@ const SprintPlanning: React.FC = () => {
                   <SelectValue placeholder='Selecciona un Sprint' />
                 </SelectTrigger>
                 <SelectContent>
-                  {sprints.map((sprint, index) => (
-                    <SelectItem key={index} value={String(index)}>
-                      {sprint.title}
-                    </SelectItem>
-                  ))}
+                  {sprints.length > 0 ? (
+                    sprints.map((sprint, index) => (
+                      <SelectItem key={index} value={String(index)}>
+                        {sprint.title}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem disabled>No hay sprints disponibles</SelectItem> // Handling case of empty sprints
+                  )}
                 </SelectContent>
               </Select>
             </CardContent>
@@ -175,67 +220,40 @@ const SprintPlanning: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
-                <p><strong>Fechas:</strong> Desde {currentSprint.start_date} hasta {currentSprint.end_date}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para el backlog del sprint */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Backlog del Sprint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul>
-                  {currentSprint.tasks.map((task, index) => (
-                    <li key={index} style={{ marginBottom: '10px' }}>
-                      <strong>Tarea:</strong> {task.task} <br />
-                      <strong>Responsable:</strong> {task.assignee} <br />
-                      <strong>Estado:</strong> {task.status}
-                      <Button type='button' variant='destructive' onClick={() => handleDeleteTask(index)} style={{ marginLeft: '10px' }}>Eliminar</Button>
-                    </li>
-                  ))}
-                </ul>
-                <form onSubmit={handleAddTask}>
-                  <Label htmlFor='new_task'>Agregar Nueva Tarea:</Label>
-                  <Input id='new_task' value={newTask} onChange={(e) => setNewTask(e.target.value)} required />
-                  <Label htmlFor='assignee'>Responsable:</Label>
-                  <Input id='assignee' value={assignee} onChange={(e) => setAssignee(e.target.value)} required />
-                  <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para actualizar objetivos */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Actualizar Objetivos del Sprint</CardTitle>
-              </CardHeader>
-              <CardContent>
                 <form onSubmit={handleUpdateObjectives}>
-                  <Label htmlFor='objectives'>Objetivos:</Label>
+                  <Label htmlFor='objectives'>Actualizar Objetivos:</Label>
                   <Textarea id='objectives' value={objectives} onChange={(e) => setObjectives(e.target.value)} required />
                   <Button type='submit' style={{ marginTop: '10px' }}>Actualizar Objetivos</Button>
                 </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para gráficas de tareas */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Gráfica de Tareas por Estado</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Bar data={getChartData()} options={{ responsive: true, maintainAspectRatio: false }} />
+                <h3>Tareas</h3>
+                <form onSubmit={handleAddTask}>
+                  <Label htmlFor='new_task'>Nueva Tarea:</Label>
+                  <Input id='new_task' value={newTask} onChange={(e) => setNewTask(e.target.value)} required />
+                  <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
+                </form>
+                <ul>
+                  {currentSprint.tasks && currentSprint.tasks.length > 0 ? (
+                    currentSprint.tasks.map((task, index) => (
+                      <li key={index}>
+                        {task.task} - {task.status}
+                        <Button onClick={() => handleDeleteTask(index)}>Eliminar</Button>
+                      </li>
+                    ))
+                  ) : (
+                    <li>No hay tareas para este sprint.</li>
+                  )}
+                </ul>
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* Gráfica de tareas */}
+        {currentSprint && currentSprint.tasks && (
+          <div style={{ marginTop: '20px' }}>
+            <Bar data={getChartData()} options={{ responsive: true }} />
+          </div>
+        )}
       </div>
     </Layout>
   )

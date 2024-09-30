@@ -1,253 +1,257 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, FormEvent } from 'react'
+import axios from 'axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable
-} from '@tanstack/react-table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import Layout from '@/components/Layout'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Bar } from 'react-chartjs-2'
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
-
-// Componente DataTable
-interface DataTableProps<TData, TValue> {
-  columns: Array<ColumnDef<TData, TValue>>
-  data: TData[]
+// Define interfaces for the data
+interface Task {
+  task: string
+  assignee: string
+  status: string
 }
 
-export function DataTable<TData, TValue> ({
-  columns,
-  data
-}: DataTableProps<TData, TValue>) {
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel()
-  })
-
-  return (
-    <div className='border rounded-md'>
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length
-            ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </TableCell>
-                ))}
-                  </TableRow>
-                ))
-              )
-            : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className='h-24 text-center'>
-      No results.
-              </TableCell>
-              </TableRow>
-              )}
-        </TableBody>
-      </Table>
-    </div>
-  )
+interface Sprint {
+  id: number
+  title: string
+  start_date: string
+  end_date: string
+  objectives: string
+  tasks: Task[]
 }
 
-// Preguntas y opciones
-const preguntas = [
-  {
-    id: 1,
-    texto: '¿Te consideras efectivo/a en comunicarte con diferentes grupos de interés (stakeholders, equipo de desarrollo, etc.)?',
-    opciones: ['Muy efectivo/a', 'Bastante efectivo/a', 'Algo efectivo/a', 'No muy efectivo/a']
-  },
-  {
-    id: 2,
-    texto: '¿Tienes experiencia en desarrollo de software y conocimientos técnicos relevantes para el proyecto?',
-    opciones: ['Mucho', 'Bastante', 'Algo', 'Poco']
-  },
-  {
-    id: 3,
-    texto: '¿Te sientes cómodo/a resolviendo impedimentos que puedan surgir durante el desarrollo del proyecto?',
-    opciones: ['Muy cómodo/a', 'Bastante cómodo/a', 'Algo cómodo/a', 'No muy cómodo/a']
-  },
-  {
-    id: 4,
-    texto: '¿Te consideras bueno/a facilitando discusiones y ayudando a otros a alcanzar consensos?',
-    opciones: ['Muy bueno/a', 'Bastante bueno/a', 'Algo bueno/a', 'No muy bueno/a']
-  },
-  {
-    id: 5,
-    texto: '¿Eres flexible y capaz de asumir múltiples roles o tareas según sea necesario?',
-    opciones: ['Muy flexible', 'Bastante flexible', 'Algo flexible', 'Poco flexible']
-  },
-  {
-    id: 6,
-    texto: '¿Eres bueno/a analizando datos y utilizando esa información para tomar decisiones informadas?',
-    opciones: ['Muy bueno/a', 'Bastante bueno/a', 'Algo bueno/a', 'Poco bueno/a']
-  },
-  {
-    id: 7,
-    texto: '¿Tienes experiencia trabajando en entornos ágiles fuera del marco Scrum?',
-    opciones: ['Sí', 'No', 'A veces']
-  },
-  {
-    id: 8,
-    texto: '¿Qué tan seguido asumen posiciones de liderato?',
-    opciones: ['Siempre', 'Frecuentemente', 'A veces', 'Raramente']
-  },
-  {
-    id: 9,
-    texto: '¿Logras terminar a tiempo tus actividades y tareas?',
-    opciones: ['Siempre', 'Frecuentemente', 'A veces', 'Raramente']
-  },
-  {
-    id: 10,
-    texto: '¿Cómo consideras tus habilidades para hacer documentación?',
-    opciones: ['Muy buenas', 'Buenas', 'Adecuadas', 'Pobres']
-  },
-  {
-    id: 11,
-    texto: '¿Cuando hay un problema cuál es tu aproximación para resolverlo?',
-    opciones: ['Proactiva', 'Reactiva', 'Busca ayuda', 'Ignora el problema']
-  },
-  {
-    id: 12,
-    texto: '¿Consideras importante la documentación en un proyecto?',
-    opciones: ['Sí', 'No', 'A veces']
-  },
-  {
-    id: 13,
-    texto: '¿Qué consideras más importante en un proyecto?',
-    opciones: ['Comunicación', 'Documentación', 'Cumplimiento de plazos', 'Calidad del producto']
-  }
-]
+const SprintPlanning: React.FC = () => {
+  const [sprints, setSprints] = useState<Sprint[]>([])
+  const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
+  const [newTask, setNewTask] = useState<string>('')
+  const [assignee, setAssignee] = useState<string>('')
+  const [objectives, setObjectives] = useState<string>('')
+  const [newSprintTitle, setNewSprintTitle] = useState<string>('')
+  const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
+  const [newSprintEndDate, setNewSprintEndDate] = useState<string>('')
 
-const EncuestaPage = () => {
-  const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [totalScore, setTotalScore] = useState<number | null>(null)
+  const team_id = 1 // Replace with the actual team_id you're using
+  const currentSprint = sprints[selectedSprintIndex]
 
-  const handleOptionChange = (id: number, score: number) => {
-    setSelectedScores((prev) => ({
-      ...prev,
-      [id]: score
-    }))
-    setError(null)
-  }
-
-  const handleSubmit = () => {
-    const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
-
-    if (unanswered) {
-      setError('Por favor, responde todas las preguntas antes de enviar.')
-      return
+  // Fetch all sprints from the backend
+  const fetchSprints = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/sprints/all-sprints/${team_id}`)
+      setSprints(response.data.sprints)
+    } catch (error) {
+      console.error('Error fetching sprints:', error)
     }
-
-    // Calculate total score
-    const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
-    setTotalScore(score)
-    setSubmitted(true)
-    setError(null)
-    console.log('Form submitted. Scores:', selectedScores)
-    console.log('Total score:', score)
   }
 
-  // Columnas para DataTable
-  const columns: Array<ColumnDef<any>> = [
-    {
-      header: 'Pregunta',
-      accessorKey: 'texto'
-    },
-    {
-      header: 'Opciones',
-      cell: ({ row }) => (
-        <div>
-          {row.original.opciones.map((opcion: string, index: number) => (
-            <label key={index} className='block'>
-              <input
-                type='radio'
-                name={`opcion_${row.original.id}`}
-                value={opcion}
-                checked={selectedScores[row.original.id] === 4 - index}
-                className='mr-2'
-                onChange={() => handleOptionChange(row.original.id, 4 - index)}
-              />
-              {opcion}
-            </label>
-          ))}
-        </div>
-      )
+  useEffect(() => {
+    fetchSprints()
+  }, [])
+
+  const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    try {
+      const response = await axios.post('http://localhost:5000/sprints/add-task', {
+        sprint_id: currentSprint.id,
+        task: newTask,
+        user_id: 1, // Replace with the actual user ID
+        status: 'Pendiente',
+        active: true
+      })
+
+      setSprints(sprints.map((sprint, index) =>
+        index === selectedSprintIndex ? { ...sprint, tasks: [...sprint.tasks, response.data] } : sprint
+      ))
+
+      setNewTask('')
+      setAssignee('')
+    } catch (error) {
+      console.error('Error adding task:', error)
     }
-  ]
+  }
+
+  const handleDeleteTask = (index: number) => {
+    if (currentSprint) {
+      const updatedSprint = { ...currentSprint }
+      updatedSprint.tasks.splice(index, 1)
+      setSprints(sprints.map((sprint, i) => (i === selectedSprintIndex ? updatedSprint : sprint)))
+    }
+  }
+
+  const handleUpdateObjectives = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    try {
+      await axios.put('http://localhost:5000/sprints/update-objective', {
+        sprint_id: currentSprint.id,
+        objective: objectives
+      })
+
+      setSprints(sprints.map((sprint, index) =>
+        index === selectedSprintIndex ? { ...sprint, objectives } : sprint
+      ))
+    } catch (error) {
+      console.error('Error updating objectives:', error)
+    }
+  }
+
+  const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    try {
+      const response = await axios.post('http://localhost:5000/sprints/add-sprint', {
+        team_id,
+        title: newSprintTitle,
+        start_date: newSprintStartDate,
+        end_date: newSprintEndDate,
+        objective: objectives
+      })
+
+      setSprints([...sprints, response.data])
+      setNewSprintTitle('')
+      setNewSprintStartDate('')
+      setNewSprintEndDate('')
+    } catch (error) {
+      console.error('Error adding sprint:', error)
+    }
+  }
+
+  // Gráfica de tareas completadas por estado
+  const getChartData = () => {
+    const labels = ['Pendiente', 'En Progreso', 'Completada']
+    const taskCounts = labels.map(status => currentSprint.tasks.filter(task => task.status === status).length)
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Cantidad de Tareas',
+          data: taskCounts,
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }
+      ]
+    }
+  }
 
   return (
     <Layout>
-      <div className='container mx-auto mt-8'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Encuesta de Satisfacción</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Responde las siguientes preguntas seleccionando la opción que mejor te describa:</p>
+      <div id='main-content' style={{ padding: '20px' }}>
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          {/* Card para seleccionar el sprint */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Selecciona un Sprint</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={String(selectedSprintIndex)} onValueChange={(value) => setSelectedSprintIndex(Number(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder='Selecciona un Sprint' />
+                </SelectTrigger>
+                <SelectContent>
+                  {sprints.map((sprint, index) => (
+                    <SelectItem key={index} value={String(index)}>
+                      {sprint.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
 
-            {/* Tabla de Preguntas */}
-            <Separator className='my-4' />
-            <DataTable columns={columns} data={preguntas} />
+          {/* Card para agregar un nuevo sprint */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Agregar Nuevo Sprint</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddSprint}>
+                <Label htmlFor='new_sprint_title'>Título:</Label>
+                <Input id='new_sprint_title' value={newSprintTitle} onChange={(e) => setNewSprintTitle(e.target.value)} required />
+                <Label htmlFor='new_sprint_start_date'>Fecha de Inicio:</Label>
+                <Input type='date' id='new_sprint_start_date' value={newSprintStartDate} onChange={(e) => setNewSprintStartDate(e.target.value)} required />
+                <Label htmlFor='new_sprint_end_date'>Fecha de Fin:</Label>
+                <Input type='date' id='new_sprint_end_date' value={newSprintEndDate} onChange={(e) => setNewSprintEndDate(e.target.value)} required />
+                <Button type='submit' style={{ marginTop: '10px' }}>Agregar Sprint</Button>
+              </form>
+            </CardContent>
+          </Card>
 
-            {/* Mostrar error si hay preguntas sin responder */}
-            {error && <p className='mt-4 text-red-500'>{error}</p>}
+          {/* Card para detalles del sprint */}
+          {currentSprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Detalles del Sprint</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
+                <p><strong>Fechas:</strong> Desde {currentSprint.start_date} hasta {currentSprint.end_date}</p>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Enviar botón */}
-            <Button onClick={handleSubmit} className='mt-4 bg-[#9A3324] text-white'>
-              Enviar
-            </Button>
+          {/* Card para el backlog del sprint */}
+          {currentSprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Backlog del Sprint</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul>
+                  {currentSprint.tasks.map((task, index) => (
+                    <li key={index} style={{ marginBottom: '10px' }}>
+                      <strong>Tarea:</strong> {task.task} <br />
+                      <strong>Responsable:</strong> {task.assignee} <br />
+                      <strong>Estado:</strong> {task.status}
+                      <Button type='button' variant='destructive' onClick={() => handleDeleteTask(index)} style={{ marginLeft: '10px' }}>Eliminar</Button>
+                    </li>
+                  ))}
+                </ul>
+                <form onSubmit={handleAddTask}>
+                  <Label htmlFor='new_task'>Agregar Nueva Tarea:</Label>
+                  <Input id='new_task' value={newTask} onChange={(e) => setNewTask(e.target.value)} required />
+                  <Label htmlFor='assignee'>Responsable:</Label>
+                  <Input id='assignee' value={assignee} onChange={(e) => setAssignee(e.target.value)} required />
+                  <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Mostrar la puntuación después de enviar */}
-            {submitted && !error && (
-              <div className='mt-6'>
-                <h2 className='text-lg font-bold'>Tu puntuación total:</h2>
-                <p className='text-xl'>{totalScore}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Card para actualizar objetivos */}
+          {currentSprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Actualizar Objetivos del Sprint</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleUpdateObjectives}>
+                  <Label htmlFor='objectives'>Objetivos:</Label>
+                  <Textarea id='objectives' value={objectives} onChange={(e) => setObjectives(e.target.value)} required />
+                  <Button type='submit' style={{ marginTop: '10px' }}>Actualizar Objetivos</Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Card para gráficas de tareas */}
+          {currentSprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Gráfica de Tareas por Estado</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Bar data={getChartData()} options={{ responsive: true, maintainAspectRatio: false }} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </Layout>
   )
 }
 
-export default EncuestaPage
+export default SprintPlanning

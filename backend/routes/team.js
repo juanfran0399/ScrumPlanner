@@ -91,7 +91,6 @@ router.get('/members/:teamId', async (req, res) => {
 })
 
 // Route to exit a team
-// Route to exit a team
 router.post('/exit', async (req, res) => {
   const { team_id, user_id } = req.body
 

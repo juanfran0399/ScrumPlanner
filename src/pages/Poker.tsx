@@ -17,7 +17,7 @@ const ScrumPoker = () => {
     'Sistema de Reservas de Hotel': ['Tarea 11', 'Tarea 12']
   }
 
-  const cards = ['1', '2', '3', '5']
+  const cards = ['1', '2', '3', '4', '5']
 
   const handleProjectSelect = (project: string) => {
     setSelectedProject(project)
