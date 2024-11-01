@@ -45,6 +45,13 @@ const SprintPlanning: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const savedObjectives = localStorage.getItem('objectives')
+    if (savedObjectives) {
+      setObjectives(savedObjectives)
+    }
+  }, [])
+
   // Fetch team_id using the user_id and store it in localStorage
   useEffect(() => {
     const fetchTeamId = async () => {
@@ -73,6 +80,12 @@ const SprintPlanning: React.FC = () => {
     } catch (error) {
       console.error('Error fetching sprints:', error)
     }
+  }
+
+  const handleObjectivesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newObjectives = e.target.value
+    setObjectives(newObjectives)
+    localStorage.setItem('objectives', newObjectives) // Save to localStorage
   }
 
   const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
@@ -108,21 +121,30 @@ const SprintPlanning: React.FC = () => {
   }
 
   const handleUpdateObjectives = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!currentSprint) return // Ensure currentSprint is defined
+    event.preventDefault();
+    if (!currentSprint || !currentSprint.sprint_id) {
+      console.error('Sprint ID is missing');
+      return;
+    }
+  
+    const updatedObjectives = objectives || ''; // Fallback to empty string if null
+    const payload = {
+      sprint_id: currentSprint.sprint_id,
+      objectives: updatedObjectives,
+    };
+  
+    console.log('Payload to send:', payload);
+  
     try {
-      await axios.put('http://localhost:5000/api/sprint/update-objective', {
-        sprint_id: currentSprint.id,
-        objective: objectives
-      })
-
+      await axios.put('http://localhost:5000/api/sprint/update-objective', payload);
       setSprints(sprints.map((sprint, index) =>
-        index === selectedSprintIndex ? { ...sprint, objectives } : sprint
-      ))
+        index === selectedSprintIndex ? { ...sprint, objectives: updatedObjectives } : sprint
+      ));
     } catch (error) {
-      console.error('Error updating objectives:', error)
+      console.error('Error updating objectives:', error);
     }
   }
+  
 
   const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -144,7 +166,7 @@ const SprintPlanning: React.FC = () => {
     }
   }
 
-  // Gráfica de tareas completadas por estado
+  // Chart data for task status
   const getChartData = () => {
     if (!currentSprint || !currentSprint.tasks) return { labels: [], datasets: [] } // Handle undefined case
 
@@ -160,16 +182,16 @@ const SprintPlanning: React.FC = () => {
           backgroundColor: 'rgba(75, 192, 192, 0.6)',
           borderColor: 'rgba(75, 192, 192, 1)',
           borderWidth: 1
-        },
+        }
       ]
-    };
+    }
   }
 
   return (
     <Layout>
       <div id='main-content' style={{ padding: '20px' }}>
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          {/* Card para seleccionar el sprint */}
+          {/* Card to select the sprint */}
           <Card>
             <CardHeader>
               <CardTitle>Selecciona un Sprint</CardTitle>
@@ -194,7 +216,7 @@ const SprintPlanning: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Card para agregar un nuevo sprint */}
+          {/* Card to add a new sprint */}
           <Card>
             <CardHeader>
               <CardTitle>Agregar Nuevo Sprint</CardTitle>
@@ -212,17 +234,25 @@ const SprintPlanning: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Card para detalles del sprint */}
+          {/* Card to display sprint details */}
           {currentSprint && (
             <Card>
               <CardHeader>
                 <CardTitle>Detalles del Sprint</CardTitle>
               </CardHeader>
               <CardContent>
-                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
+                <p><strong>Título:</strong> {currentSprint.title}</p>
+                <p><strong>Fecha de Inicio:</strong> {currentSprint.start_date}</p>
+                <p><strong>Fecha de Fin:</strong> {currentSprint.end_date}</p>
+                <p><strong>Objetivos:</strong> {currentSprint.Objectives}</p>
                 <form onSubmit={handleUpdateObjectives}>
                   <Label htmlFor='objectives'>Actualizar Objetivos:</Label>
-                  <Textarea id='objectives' value={objectives} onChange={(e) => setObjectives(e.target.value)} required />
+                  <Textarea
+                    id='objectives'
+                    value={objectives}
+                    onChange={handleObjectivesChange} // Use the new change handler
+                    required
+                  />
                   <Button type='submit' style={{ marginTop: '10px' }}>Actualizar Objetivos</Button>
                 </form>
                 <h3>Tareas</h3>
@@ -232,23 +262,25 @@ const SprintPlanning: React.FC = () => {
                   <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
                 </form>
                 <ul>
-                  {currentSprint.tasks && currentSprint.tasks.length > 0 ? (
-                    currentSprint.tasks.map((task, index) => (
-                      <li key={index}>
-                        {task.task} - {task.status}
-                        <Button onClick={() => handleDeleteTask(index)}>Eliminar</Button>
-                      </li>
-                    ))
-                  ) : (
-                    <li>No hay tareas para este sprint.</li>
-                  )}
+                  {currentSprint.tasks && currentSprint.tasks.length > 0
+                    ? (
+                        currentSprint.tasks.map((task, index) => (
+                          <li key={index}>
+                            {task.task} - {task.status}
+                            <Button onClick={() => handleDeleteTask(index)}>Eliminar</Button>
+                          </li>
+                        ))
+                      )
+                    : (
+                      <li>No hay tareas para este sprint.</li>
+                      )}
                 </ul>
               </CardContent>
             </Card>
           )}
         </div>
 
-        {/* Gráfica de tareas */}
+        {/* Task chart */}
         {currentSprint && currentSprint.tasks && (
           <div style={{ marginTop: '20px' }}>
             <Bar data={getChartData()} options={{ responsive: true }} />

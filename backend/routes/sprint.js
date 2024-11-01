@@ -27,12 +27,13 @@ router.post('/add-sprint', async (req, res) => {
 
 // Route to modify sprint objectives
 router.put('/update-objective', async (req, res) => {
-  const { sprint_id, objective } = req.body
+  const { sprint_id, objectives } = req.body
 
   try {
+    // Ensure the query uses the correct column name (`objectives`).
     const result = await pool.query(
-      'UPDATE Sprint SET objective = ? WHERE sprint_id = ?',
-      [objective, sprint_id]
+      'UPDATE Sprint SET Objectives = ? WHERE sprint_id = ?',
+      [objectives, sprint_id]
     )
     console.log('Update result:', result) // Debug log
 
