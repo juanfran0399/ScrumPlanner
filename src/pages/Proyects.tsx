@@ -1,77 +1,108 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { IconPlus } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDrag, useDrop, DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
-// Ejemplos iniciales de tareas
-const initialTasks = [
-  {
-    id: '1',
-    title: 'Configurar el entorno de desarrollo',
-    description: 'Instalar dependencias y configurar variables de entorno.',
-    status: 'Backlog',
-    subtasks: ['Instalar Node.js', 'Configurar .env'],
-    comments: ['Revisar versiones de dependencias'],
-    assignedTo: 'Juan Pérez',
-    complexity: 'Baja'
-  }
-  // otras tareas...
-]
-
-// Definir los nombres de las columnas
+const API_BASE_URL = 'http://localhost:5000/api/planner' // Update with your backend URL
 const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
-
 const complexityOptions = ['Baja', 'Media', 'Alta']
 
 const TaskManagerPlanner = () => {
-  const [tasks, setTasks] = useState(initialTasks)
+  const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
-  const [selectedTask, setSelectedTask] = useState(null)
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
 
-  // Función para añadir nueva tarea
-  const addTask = () => {
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tasks`)
+        const data = await response.json()
+        setTasks(data.tasks)
+      } catch (error) {
+        console.error('Error fetching tasks:', error)
+      }
+    }
+
+    fetchTasks()
+  }, [])
+
+  const addTask = async () => {
     if (newTask.title && newTask.description) {
-      setTasks([
-        ...tasks,
-        {
-          id: (tasks.length + 1).toString(),
-          title: newTask.title,
-          description: newTask.description,
-          status: 'Backlog',
-          subtasks: [],
-          comments: [],
-          assignedTo: newTask.assignedTo,
-          complexity: newTask.complexity
+      const newTaskData = {
+        title: newTask.title,
+        description: newTask.description,
+        status: 'Backlog',
+        assignedTo: newTask.assignedTo,
+        complexity: newTask.complexity
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTaskData)
+        })
+
+        if (response.ok) {
+          const { taskId } = await response.json()
+          setTasks((prevTasks) => [...prevTasks, { ...newTaskData, id: taskId }])
+          setNewTask({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
+          setIsNewTaskDialogOpen(false)
         }
-      ])
-      setNewTask({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
-      setIsNewTaskDialogOpen(false)
+      } catch (error) {
+        console.error('Error adding task:', error)
+      }
     }
   }
 
-  // Drag and drop handling
-  const moveTask = (taskId, newStatus) => {
-    setTasks(tasks.map(task => (task.id === taskId ? { ...task, status: newStatus } : task)))
+  const moveTask = async (taskId, newStatus) => {
+    try {
+      const payload = { id: taskId, status: newStatus }
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload) // Send the payload
+      })
+      if (response.ok) {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)) // Update the task status locally
+        )
+      } else {
+        console.error('Failed to update task status')
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error)
+    }
+  }
+
+  const deleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    }
   }
 
   const TaskCard = ({ task }) => {
     const [{ isDragging }, drag] = useDrag(() => ({
       type: 'task',
-      item: { id: task.id },
-      collect: (monitor) => ({
-        isDragging: !!monitor.isDragging()
-      })
+      item: { id: task.id }, // Ensure task.id is correctly passed here
+      collect: (monitor) => ({ isDragging: !!monitor.isDragging() })
     }))
+
+    console.log('Dragging task with ID:', task.id)
 
     return (
       <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className='cursor-pointer'>
@@ -83,10 +114,13 @@ const TaskManagerPlanner = () => {
             <p>{task.description}</p>
             <Separator className='my-2' />
             <p><strong>Asignado a:</strong> {task.assignedTo}</p>
-            <div className='flex justify-end mt-2'>
+            <div className='flex justify-between mt-2'>
               <Badge variant='outline' style={getComplexityBadgeStyle(task.complexity)}>
                 {task.complexity}
               </Badge>
+              <Button variant='destructive' size='sm' onClick={async () => await deleteTask(task.id)}>
+                Eliminar
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -97,7 +131,7 @@ const TaskManagerPlanner = () => {
   const Column = ({ status, children }) => {
     const [, drop] = useDrop({
       accept: 'task',
-      drop: (item) => moveTask(item.id, status)
+      drop: async (item) => await moveTask(item.id, status) // Pass task id and new status
     })
 
     return (
@@ -108,28 +142,14 @@ const TaskManagerPlanner = () => {
     )
   }
 
-  // Filtrar tareas por estado
   const filterTasksByStatus = (status) => tasks.filter((task) => task.status === status)
-
-  // Calcular el progreso total basado en las tareas completadas
-  const calculateProgress = () => {
-    const totalTasks = tasks.length
-    const completedTasks = filterTasksByStatus('Terminado').length
-    if (totalTasks === 0) return 0
-    return (completedTasks / totalTasks) * 100
-  }
-
-  // Obtener color del badge
+  const calculateProgress = () => (tasks.length === 0 ? 0 : (filterTasksByStatus('Terminado').length / tasks.length) * 100)
   const getComplexityBadgeStyle = (complexity) => {
     switch (complexity) {
-      case 'Baja':
-        return { backgroundColor: '#d4edda', color: '#155724' }
-      case 'Media':
-        return { backgroundColor: '#fff3cd', color: '#856404' }
-      case 'Alta':
-        return { backgroundColor: '#f8d7da', color: '#721c24' }
-      default:
-        return {}
+      case 'Baja': return { backgroundColor: '#d4edda', color: '#155724' }
+      case 'Media': return { backgroundColor: '#fff3cd', color: '#856404' }
+      case 'Alta': return { backgroundColor: '#f8d7da', color: '#721c24' }
+      default: return {}
     }
   }
 
@@ -141,13 +161,12 @@ const TaskManagerPlanner = () => {
             <h2 className='mb-2 text-lg font-bold'>Progreso del Proyecto</h2>
             <Progress value={calculateProgress()} />
           </div>
-
           <Card className='relative'>
             <CardHeader>
               <CardTitle>Gestor de Tareas</CardTitle>
               <Dialog open={isNewTaskDialogOpen} onOpenChange={setIsNewTaskDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className='absolute top-2 right-2' onClick={() => setIsNewTaskDialogOpen(true)}>
+                  <Button className='absolute top-2 right-2'>
                     <IconPlus className='inline-block mr-1' /> Agregar Nueva Tarea
                   </Button>
                 </DialogTrigger>

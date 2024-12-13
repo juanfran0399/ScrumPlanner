@@ -1,257 +1,232 @@
-import React, { useState, useEffect, FormEvent } from 'react'
-import axios from 'axios'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
+import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Bar } from 'react-chartjs-2'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { IconPlus } from '@tabler/icons-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useDrag, useDrop, DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 
-// Define interfaces for the data
-interface Task {
-  task: string
-  assignee: string
-  status: string
-}
+const API_BASE_URL = 'http://localhost:5000/api/planner' // Update with your backend URL
+const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
+const complexityOptions = ['Baja', 'Media', 'Alta']
 
-interface Sprint {
-  id: number
-  title: string
-  start_date: string
-  end_date: string
-  objectives: string
-  tasks: Task[]
-}
-
-const SprintPlanning: React.FC = () => {
-  const [sprints, setSprints] = useState<Sprint[]>([])
-  const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
-  const [newTask, setNewTask] = useState<string>('')
-  const [assignee, setAssignee] = useState<string>('')
-  const [objectives, setObjectives] = useState<string>('')
-  const [newSprintTitle, setNewSprintTitle] = useState<string>('')
-  const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
-  const [newSprintEndDate, setNewSprintEndDate] = useState<string>('')
-
-  const team_id = 1 // Replace with the actual team_id you're using
-  const currentSprint = sprints[selectedSprintIndex]
-
-  // Fetch all sprints from the backend
-  const fetchSprints = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/sprints/all-sprints/${team_id}`)
-      setSprints(response.data.sprints)
-    } catch (error) {
-      console.error('Error fetching sprints:', error)
-    }
-  }
+const TaskManagerPlanner = () => {
+  const [tasks, setTasks] = useState([])
+  const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
+  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
 
   useEffect(() => {
-    fetchSprints()
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tasks`)
+        const data = await response.json()
+        setTasks(data.tasks)
+      } catch (error) {
+        console.error('Error fetching tasks:', error)
+      }
+    }
+
+    fetchTasks()
   }, [])
 
-  const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      const response = await axios.post('http://localhost:5000/sprints/add-task', {
-        sprint_id: currentSprint.id,
-        task: newTask,
-        user_id: 1, // Replace with the actual user ID
-        status: 'Pendiente',
-        active: true
-      })
+  const addTask = async () => {
+    if (newTask.title && newTask.description) {
+      const newTaskData = {
+        title: newTask.title,
+        description: newTask.description,
+        status: 'Backlog',
+        assignedTo: newTask.assignedTo,
+        complexity: newTask.complexity
+      }
 
-      setSprints(sprints.map((sprint, index) =>
-        index === selectedSprintIndex ? { ...sprint, tasks: [...sprint.tasks, response.data] } : sprint
-      ))
+      try {
+        const response = await fetch(`${API_BASE_URL}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTaskData)
+        })
 
-      setNewTask('')
-      setAssignee('')
-    } catch (error) {
-      console.error('Error adding task:', error)
-    }
-  }
-
-  const handleDeleteTask = (index: number) => {
-    if (currentSprint) {
-      const updatedSprint = { ...currentSprint }
-      updatedSprint.tasks.splice(index, 1)
-      setSprints(sprints.map((sprint, i) => (i === selectedSprintIndex ? updatedSprint : sprint)))
-    }
-  }
-
-  const handleUpdateObjectives = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      await axios.put('http://localhost:5000/sprints/update-objective', {
-        sprint_id: currentSprint.id,
-        objective: objectives
-      })
-
-      setSprints(sprints.map((sprint, index) =>
-        index === selectedSprintIndex ? { ...sprint, objectives } : sprint
-      ))
-    } catch (error) {
-      console.error('Error updating objectives:', error)
-    }
-  }
-
-  const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      const response = await axios.post('http://localhost:5000/sprints/add-sprint', {
-        team_id,
-        title: newSprintTitle,
-        start_date: newSprintStartDate,
-        end_date: newSprintEndDate,
-        objective: objectives
-      })
-
-      setSprints([...sprints, response.data])
-      setNewSprintTitle('')
-      setNewSprintStartDate('')
-      setNewSprintEndDate('')
-    } catch (error) {
-      console.error('Error adding sprint:', error)
-    }
-  }
-
-  // Gráfica de tareas completadas por estado
-  const getChartData = () => {
-    const labels = ['Pendiente', 'En Progreso', 'Completada']
-    const taskCounts = labels.map(status => currentSprint.tasks.filter(task => task.status === status).length)
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Cantidad de Tareas',
-          data: taskCounts,
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1
+        if (response.ok) {
+          const { taskId } = await response.json()
+          setTasks((prevTasks) => [...prevTasks, { ...newTaskData, id: taskId }])
+          setNewTask({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
+          setIsNewTaskDialogOpen(false)
         }
-      ]
+      } catch (error) {
+        console.error('Error adding task:', error)
+      }
+    }
+  }
+
+  const moveTask = async (taskId, newStatus) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (response.ok) {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task))
+        )
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error)
+    }
+  }
+
+  const deleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    }
+  }
+
+  const TaskCard = ({ task }) => {
+    const [{ isDragging }, drag] = useDrag(() => ({
+      type: 'task',
+      item: { id: task.id },
+      collect: (monitor) => ({ isDragging: !!monitor.isDragging() })
+    }))
+
+    return (
+      <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className='cursor-pointer'>
+        <Card className='mb-2'>
+          <CardHeader>
+            <CardTitle>{task.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{task.description}</p>
+            <Separator className='my-2' />
+            <p><strong>Asignado a:</strong> {task.assignedTo}</p>
+            <div className='flex justify-between mt-2'>
+              <Badge variant='outline' style={getComplexityBadgeStyle(task.complexity)}>
+                {task.complexity}
+              </Badge>
+              <Button variant='destructive' size='sm' onClick={async () => await deleteTask(task.id)}>
+                Eliminar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const Column = ({ status, children }) => {
+    const [, drop] = useDrop({
+      accept: 'task',
+      drop: async (item) => await moveTask(item.id, status)
+    })
+
+    return (
+      <div ref={drop} className='p-4 border rounded'>
+        <h2 className='text-lg font-bold'>{status}</h2>
+        <div className='mt-2'>{children}</div>
+      </div>
+    )
+  }
+
+  const filterTasksByStatus = (status) => tasks.filter((task) => task.status === status)
+  const calculateProgress = () => (tasks.length === 0 ? 0 : (filterTasksByStatus('Terminado').length / tasks.length) * 100)
+  const getComplexityBadgeStyle = (complexity) => {
+    switch (complexity) {
+      case 'Baja': return { backgroundColor: '#d4edda', color: '#155724' }
+      case 'Media': return { backgroundColor: '#fff3cd', color: '#856404' }
+      case 'Alta': return { backgroundColor: '#f8d7da', color: '#721c24' }
+      default: return {}
     }
   }
 
   return (
-    <Layout>
-      <div id='main-content' style={{ padding: '20px' }}>
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          {/* Card para seleccionar el sprint */}
-          <Card>
+    <DndProvider backend={HTML5Backend}>
+      <Layout>
+        <div className='p-6'>
+          <div className='mb-4'>
+            <h2 className='mb-2 text-lg font-bold'>Progreso del Proyecto</h2>
+            <Progress value={calculateProgress()} />
+          </div>
+          <Card className='relative'>
             <CardHeader>
-              <CardTitle>Selecciona un Sprint</CardTitle>
+              <CardTitle>Gestor de Tareas</CardTitle>
+              <Dialog open={isNewTaskDialogOpen} onOpenChange={setIsNewTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className='absolute top-2 right-2'>
+                    <IconPlus className='inline-block mr-1' /> Agregar Nueva Tarea
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Agregar Nueva Tarea</DialogTitle>
+                  </DialogHeader>
+                  <div className='flex flex-col space-y-4'>
+                    <Input
+                      type='text'
+                      placeholder='Título de la tarea'
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    />
+                    <Input
+                      type='text'
+                      placeholder='Descripción de la tarea'
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    />
+                    <Select
+                      value={newTask.complexity}
+                      onValueChange={(value) => setNewTask({ ...newTask, complexity: value })}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder='Seleccionar complejidad' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {complexityOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type='text'
+                      placeholder='Asignado a'
+                      value={newTask.assignedTo}
+                      onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
+                    />
+                    <Button onClick={addTask} className='px-4 py-2'>
+                      Añadir
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              <Select value={String(selectedSprintIndex)} onValueChange={(value) => setSelectedSprintIndex(Number(value))}>
-                <SelectTrigger>
-                  <SelectValue placeholder='Selecciona un Sprint' />
-                </SelectTrigger>
-                <SelectContent>
-                  {sprints.map((sprint, index) => (
-                    <SelectItem key={index} value={String(index)}>
-                      {sprint.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className='grid grid-cols-5 gap-4'>
+                {columns.map((status) => (
+                  <Column key={status} status={status}>
+                    {filterTasksByStatus(status).map((task) => (
+                      <TaskCard key={task.id} task={task} />
+                    ))}
+                  </Column>
+                ))}
+              </div>
             </CardContent>
           </Card>
-
-          {/* Card para agregar un nuevo sprint */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Agregar Nuevo Sprint</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddSprint}>
-                <Label htmlFor='new_sprint_title'>Título:</Label>
-                <Input id='new_sprint_title' value={newSprintTitle} onChange={(e) => setNewSprintTitle(e.target.value)} required />
-                <Label htmlFor='new_sprint_start_date'>Fecha de Inicio:</Label>
-                <Input type='date' id='new_sprint_start_date' value={newSprintStartDate} onChange={(e) => setNewSprintStartDate(e.target.value)} required />
-                <Label htmlFor='new_sprint_end_date'>Fecha de Fin:</Label>
-                <Input type='date' id='new_sprint_end_date' value={newSprintEndDate} onChange={(e) => setNewSprintEndDate(e.target.value)} required />
-                <Button type='submit' style={{ marginTop: '10px' }}>Agregar Sprint</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Card para detalles del sprint */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Detalles del Sprint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
-                <p><strong>Fechas:</strong> Desde {currentSprint.start_date} hasta {currentSprint.end_date}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para el backlog del sprint */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Backlog del Sprint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul>
-                  {currentSprint.tasks.map((task, index) => (
-                    <li key={index} style={{ marginBottom: '10px' }}>
-                      <strong>Tarea:</strong> {task.task} <br />
-                      <strong>Responsable:</strong> {task.assignee} <br />
-                      <strong>Estado:</strong> {task.status}
-                      <Button type='button' variant='destructive' onClick={() => handleDeleteTask(index)} style={{ marginLeft: '10px' }}>Eliminar</Button>
-                    </li>
-                  ))}
-                </ul>
-                <form onSubmit={handleAddTask}>
-                  <Label htmlFor='new_task'>Agregar Nueva Tarea:</Label>
-                  <Input id='new_task' value={newTask} onChange={(e) => setNewTask(e.target.value)} required />
-                  <Label htmlFor='assignee'>Responsable:</Label>
-                  <Input id='assignee' value={assignee} onChange={(e) => setAssignee(e.target.value)} required />
-                  <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para actualizar objetivos */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Actualizar Objetivos del Sprint</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleUpdateObjectives}>
-                  <Label htmlFor='objectives'>Objetivos:</Label>
-                  <Textarea id='objectives' value={objectives} onChange={(e) => setObjectives(e.target.value)} required />
-                  <Button type='submit' style={{ marginTop: '10px' }}>Actualizar Objetivos</Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Card para gráficas de tareas */}
-          {currentSprint && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Gráfica de Tareas por Estado</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Bar data={getChartData()} options={{ responsive: true, maintainAspectRatio: false }} />
-              </CardContent>
-            </Card>
-          )}
         </div>
-      </div>
-    </Layout>
+      </Layout>
+    </DndProvider>
   )
 }
 
-export default SprintPlanning
+export default TaskManagerPlanner
