@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDrag, useDrop, DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
-const API_BASE_URL = 'http://localhost:5000/api/planner' // Update with your backend URL
+const API_BASE_URL = 'http://localhost:5000/api/planner'
 const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
 const complexityOptions = ['Baja', 'Media', 'Alta']
 
@@ -74,7 +74,7 @@ const TaskManagerPlanner = () => {
       })
       if (response.ok) {
         setTasks((prevTasks) =>
-          prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)) // Update the task status locally
+          prevTasks.map((task) => (task.id_serial === taskId ? { ...task, status: newStatus } : task)) // Update the task status locally
         )
       } else {
         console.error('Failed to update task status')
@@ -86,9 +86,15 @@ const TaskManagerPlanner = () => {
 
   const deleteTask = async (taskId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, { method: 'DELETE' })
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'DELETE'
+      })
+
       if (response.ok) {
-        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id_serial !== taskId))
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to delete task:', errorData.error)
       }
     } catch (error) {
       console.error('Error deleting task:', error)
@@ -96,13 +102,13 @@ const TaskManagerPlanner = () => {
   }
 
   const TaskCard = ({ task }) => {
+    console.log('Task in TaskCard:', task)
+
     const [{ isDragging }, drag] = useDrag(() => ({
       type: 'task',
-      item: { id: task.id }, // Ensure task.id is correctly passed here
+      item: { id: task?.id_serial }, // Safely access task.id
       collect: (monitor) => ({ isDragging: !!monitor.isDragging() })
     }))
-
-    console.log('Dragging task with ID:', task.id)
 
     return (
       <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }} className='cursor-pointer'>
@@ -118,9 +124,10 @@ const TaskManagerPlanner = () => {
               <Badge variant='outline' style={getComplexityBadgeStyle(task.complexity)}>
                 {task.complexity}
               </Badge>
-              <Button variant='destructive' size='sm' onClick={async () => await deleteTask(task.id)}>
+              <Button variant='destructive' size='sm' onClick={async () => await deleteTask(task.id_serial)}>
                 Eliminar
               </Button>
+
             </div>
           </CardContent>
         </Card>
@@ -131,7 +138,15 @@ const TaskManagerPlanner = () => {
   const Column = ({ status, children }) => {
     const [, drop] = useDrop({
       accept: 'task',
-      drop: async (item) => await moveTask(item.id, status) // Pass task id and new status
+      drop: async (item) => {
+        console.log('Dropped item:', item) // Debugging: Ensure item contains id
+
+        if (item?.id) {
+          await moveTask(item.id, status) // Send the task ID correctly
+        } else {
+          console.error('Task ID is missing!')
+        }
+      }
     })
 
     return (

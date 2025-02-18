@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDrag, useDrop, DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
-const API_BASE_URL = 'http://localhost:5000/api/planner' // Update with your backend URL
+const API_BASE_URL = 'http://localhost:5000/api/planner'
 const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
 const complexityOptions = ['Baja', 'Media', 'Alta']
 
@@ -66,16 +66,18 @@ const TaskManagerPlanner = () => {
 
   const moveTask = async (taskId, newStatus) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      const payload = { id: taskId, status: newStatus }
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify(payload) // Send the payload
       })
-
       if (response.ok) {
         setTasks((prevTasks) =>
-          prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task))
+          prevTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)) // Update the task status locally
         )
+      } else {
+        console.error('Failed to update task status')
       }
     } catch (error) {
       console.error('Error updating task status:', error)
@@ -94,9 +96,11 @@ const TaskManagerPlanner = () => {
   }
 
   const TaskCard = ({ task }) => {
+    console.log('TaskCard received task:', task) // Debugging line
+
     const [{ isDragging }, drag] = useDrag(() => ({
       type: 'task',
-      item: { id: task.id },
+      item: { id: task?.id }, // Safely access task.id
       collect: (monitor) => ({ isDragging: !!monitor.isDragging() })
     }))
 
@@ -127,9 +131,15 @@ const TaskManagerPlanner = () => {
   const Column = ({ status, children }) => {
     const [, drop] = useDrop({
       accept: 'task',
-      drop: async (item) => await moveTask(item.id, status)
+      drop: async (item) => {
+        console.log('Dropped item:', item) // Debugging
+        if (item?.id) {
+          await moveTask(item.id, status)
+        } else {
+          console.error('Task ID is missing!')
+        }
+      }
     })
-
     return (
       <div ref={drop} className='p-4 border rounded'>
         <h2 className='text-lg font-bold'>{status}</h2>

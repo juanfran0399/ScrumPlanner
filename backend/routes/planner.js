@@ -3,10 +3,13 @@ import pool from '../database.js'
 
 const router = express.Router()
 
-// Route to fetch all tasks
+// Route to fetch all tasks (with optional pagination)
 router.get('/tasks', async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10
+  const offset = parseInt(req.query.offset) || 0
+
   try {
-    const [rows] = await pool.query('SELECT * FROM tasks')
+    const [rows] = await pool.query('SELECT * FROM tasks LIMIT ? OFFSET ?', [limit, offset])
     res.status(200).json({ tasks: rows })
   } catch (error) {
     console.error('Error fetching tasks:', error)
@@ -16,7 +19,11 @@ router.get('/tasks', async (req, res) => {
 
 // Route to fetch a single task by ID
 router.get('/tasks/:id', async (req, res) => {
-  const { id } = req.params
+  const id = Number(req.params.id)
+
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid task ID' })
+  }
 
   try {
     const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id])
@@ -43,48 +50,62 @@ router.post('/tasks', async (req, res) => {
   try {
     const [result] = await pool.query(
       'INSERT INTO tasks (title, description, status, assignedTo, complexity) VALUES (?, ?, ?, ?, ?)',
-      [title, description, status, assignedTo || 'No asignado', complexity]
+      [title, description, status, assignedTo || null, complexity]
     )
 
     res.status(201).json({ message: 'Task added successfully', taskId: result.insertId })
   } catch (error) {
     console.error('Error adding task:', error)
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Task title must be unique' })
+    }
     res.status(500).json({ error: 'An error occurred while adding the task.' })
   }
 })
 
+// Route to update task status
 router.put('/tasks', async (req, res) => {
-  console.log('Received request body:', req.body) // Log the incoming request body to see if both fields are present
+  console.log('Received request body:', req.body) // Debugging
 
   const { id, status } = req.body
+  const taskId = Number(id)
 
-  if (!id || !status) {
-    return res.status(400).json({ error: 'Missing required fields (id or status)' })
+  // Validate that id is provided and is a valid number
+  if (!id || isNaN(taskId)) {
+    return res.status(400).json({ error: 'Invalid or missing task ID' })
+  }
+
+  if (!status) {
+    return res.status(400).json({ error: 'Missing status field' })
   }
 
   try {
     const [result] = await pool.query(
-      'UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, id]
+      'UPDATE tasks SET status = ? WHERE id_serial = ?',
+      [status, taskId]
     )
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Task not found' })
     }
 
-    res.status(200).json({ message: 'Task status updated successfully' })
+    res.status(200).json({ message: 'Task status updated successfully', updatedTask: { id: taskId, status } })
   } catch (error) {
     console.error('Error updating task:', error)
     res.status(500).json({ error: 'An error occurred while updating the task.' })
   }
 })
 
-// Route to delete a task
+// Route to delete a task by ID
 router.delete('/tasks/:id', async (req, res) => {
-  const { id } = req.params
+  const id = Number(req.params.id)
+
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid task ID' })
+  }
 
   try {
-    const [result] = await pool.query('DELETE FROM tasks WHERE id = ?', [id])
+    const [result] = await pool.query('DELETE FROM tasks WHERE id_serial = ?', [id])
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Task not found' })

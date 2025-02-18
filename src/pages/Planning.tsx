@@ -9,10 +9,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Bar } from 'react-chartjs-2'
 
-// Define interfaces for the data
+// Interfaces for Sprint and Task
 interface Task {
   task: string
-  assignee: string
+  assignee?: string
   status: string
 }
 
@@ -29,7 +29,6 @@ const SprintPlanning: React.FC = () => {
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
   const [newTask, setNewTask] = useState<string>('')
-  const [assignee, setAssignee] = useState<string>('')
   const [objectives, setObjectives] = useState<string>('')
   const [newSprintTitle, setNewSprintTitle] = useState<string>('')
   const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
@@ -37,62 +36,50 @@ const SprintPlanning: React.FC = () => {
   const [teamId, setTeamId] = useState<number | null>(null)
   const [userId, setUserId] = useState<number | null>(null)
 
-  // Retrieve user_id from localStorage when the component mounts
   useEffect(() => {
     const storedUserId = parseInt(localStorage.getItem('id_usuario') || '0', 10)
-    if (storedUserId) {
-      setUserId(storedUserId)
-    }
+    if (storedUserId) setUserId(storedUserId)
   }, [])
 
   useEffect(() => {
-    const savedObjectives = localStorage.getItem('objectives')
-    if (savedObjectives) {
-      setObjectives(savedObjectives)
-    }
-  }, [])
-
-  // Fetch team_id using the user_id and store it in localStorage
-  useEffect(() => {
-    const fetchTeamId = async () => {
-      if (userId) {
+    if (userId) {
+      const fetchTeamId = async () => {
         try {
-          const response = await axios.get(`http://localhost:5000/api/sprint/team/${userId}`)
-          const fetchedTeamId = response.data.team_id
-          setTeamId(fetchedTeamId)
-          localStorage.setItem('team_id', fetchedTeamId.toString())
-          fetchSprints(fetchedTeamId) // Fetch sprints after getting the team_id
+          const { data } = await axios.get(`http://localhost:5000/api/sprint/team/${userId}`)
+          setTeamId(data.team_id)
+          localStorage.setItem('team_id', data.team_id.toString())
+          fetchSprints(data.team_id)
         } catch (error) {
-          console.error('Error fetching team_id:', error)
+          console.error('Error fetching team ID:', error)
         }
       }
+      fetchTeamId()
     }
-    fetchTeamId()
   }, [userId])
 
-  const currentSprint = sprints[selectedSprintIndex] || null // Handle undefined case
-
-  // Fetch all sprints from the backend
   const fetchSprints = async (teamId: number) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
-      setSprints(response.data.sprints)
+      const { data } = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+      setSprints(data.sprints)
     } catch (error) {
       console.error('Error fetching sprints:', error)
     }
   }
 
+  const currentSprint = sprints[selectedSprintIndex] || null
+
   const handleObjectivesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newObjectives = e.target.value
-    setObjectives(newObjectives)
-    localStorage.setItem('objectives', newObjectives) // Save to localStorage
+    const updatedObjectives = e.target.value
+    setObjectives(updatedObjectives)
+    localStorage.setItem('objectives', updatedObjectives)
   }
 
   const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!currentSprint) return // Ensure currentSprint is defined
+    if (!currentSprint) return
+
     try {
-      const response = await axios.post('http://localhost:5000/api/sprint/add-task', {
+      const { data } = await axios.post('http://localhost:5000/api/sprint/add-task', {
         sprint_id: currentSprint.id,
         task: newTask,
         user_id: userId,
@@ -100,56 +87,21 @@ const SprintPlanning: React.FC = () => {
         active: true
       })
 
-      setSprints(sprints.map((sprint, index) =>
-        index === selectedSprintIndex ? { ...sprint, tasks: [...(sprint.tasks || []), response.data] } : sprint
-      ))
-
+      setSprints(
+        sprints.map((sprint, index) =>
+          index === selectedSprintIndex ? { ...sprint, tasks: [...sprint.tasks, data] } : sprint
+        )
+      )
       setNewTask('')
-      setAssignee('')
     } catch (error) {
       console.error('Error adding task:', error)
     }
   }
 
-  const handleDeleteTask = (index: number) => {
-    if (currentSprint) {
-      const updatedSprint = { ...currentSprint }
-      updatedSprint.tasks = updatedSprint.tasks ? [...updatedSprint.tasks] : []
-      updatedSprint.tasks.splice(index, 1)
-      setSprints(sprints.map((sprint, i) => (i === selectedSprintIndex ? updatedSprint : sprint)))
-    }
-  }
-
-  const handleUpdateObjectives = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!currentSprint || !currentSprint.sprint_id) {
-      console.error('Sprint ID is missing');
-      return;
-    }
-  
-    const updatedObjectives = objectives || ''; // Fallback to empty string if null
-    const payload = {
-      sprint_id: currentSprint.sprint_id,
-      objectives: updatedObjectives,
-    };
-  
-    console.log('Payload to send:', payload);
-  
-    try {
-      await axios.put('http://localhost:5000/api/sprint/update-objective', payload);
-      setSprints(sprints.map((sprint, index) =>
-        index === selectedSprintIndex ? { ...sprint, objectives: updatedObjectives } : sprint
-      ));
-    } catch (error) {
-      console.error('Error updating objectives:', error);
-    }
-  }
-  
-
   const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     try {
-      const response = await axios.post('http://localhost:5000/api/sprint/add-sprint', {
+      const { data } = await axios.post('http://localhost:5000/api/sprint/add-sprint', {
         user_id: userId,
         team_id: teamId,
         title: newSprintTitle,
@@ -157,7 +109,7 @@ const SprintPlanning: React.FC = () => {
         end_date: newSprintEndDate
       })
 
-      setSprints([...sprints, response.data])
+      setSprints([...sprints, data])
       setNewSprintTitle('')
       setNewSprintStartDate('')
       setNewSprintEndDate('')
@@ -166,12 +118,13 @@ const SprintPlanning: React.FC = () => {
     }
   }
 
-  // Chart data for task status
   const getChartData = () => {
-    if (!currentSprint || !currentSprint.tasks) return { labels: [], datasets: [] } // Handle undefined case
+    if (!currentSprint?.tasks) return { labels: [], datasets: [] }
 
     const labels = ['Pendiente', 'En Progreso', 'Completada']
-    const taskCounts = labels.map(status => currentSprint.tasks.filter(task => task.status === status).length)
+    const taskCounts = labels.map(
+      (status) => currentSprint.tasks.filter((task) => task.status === status).length
+    )
 
     return {
       labels,
@@ -179,9 +132,7 @@ const SprintPlanning: React.FC = () => {
         {
           label: 'Cantidad de Tareas',
           data: taskCounts,
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1
+          backgroundColor: ['#FF6384', '#36A2EB', '#4BC0C0']
         }
       ]
     }
@@ -189,53 +140,78 @@ const SprintPlanning: React.FC = () => {
 
   return (
     <Layout>
-      <div id='main-content' style={{ padding: '20px' }}>
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          {/* Card to select the sprint */}
+      <div className='p-6'>
+        <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
           <Card>
             <CardHeader>
               <CardTitle>Selecciona un Sprint</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={String(selectedSprintIndex)} onValueChange={(value) => setSelectedSprintIndex(Number(value))}>
+              <Select
+                value={String(selectedSprintIndex)}
+                onValueChange={(value) => setSelectedSprintIndex(Number(value))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder='Selecciona un Sprint' />
                 </SelectTrigger>
                 <SelectContent>
-                  {sprints.length > 0 ? (
-                    sprints.map((sprint, index) => (
-                      <SelectItem key={index} value={String(index)}>
-                        {sprint.title}
+                  {sprints && sprints.length > 0
+                    ? (
+                        sprints.map((sprint, index) => (
+                          <SelectItem key={sprint.id || index} value={String(index)}>
+                            {sprint.title}
+                          </SelectItem>
+                        ))
+                      )
+                    : (
+                      <SelectItem disabled value='_no_sprints_'>
+                        No hay sprints disponibles
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled>No hay sprints disponibles</SelectItem> // Handling case of empty sprints
-                  )}
+                      )}
                 </SelectContent>
               </Select>
             </CardContent>
           </Card>
 
-          {/* Card to add a new sprint */}
           <Card>
             <CardHeader>
               <CardTitle>Agregar Nuevo Sprint</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddSprint}>
-                <Label htmlFor='new_sprint_title'>Título:</Label>
-                <Input id='new_sprint_title' value={newSprintTitle} onChange={(e) => setNewSprintTitle(e.target.value)} required />
-                <Label htmlFor='new_sprint_start_date'>Fecha de Inicio:</Label>
-                <Input type='date' id='new_sprint_start_date' value={newSprintStartDate} onChange={(e) => setNewSprintStartDate(e.target.value)} required />
-                <Label htmlFor='new_sprint_end_date'>Fecha de Fin:</Label>
-                <Input type='date' id='new_sprint_end_date' value={newSprintEndDate} onChange={(e) => setNewSprintEndDate(e.target.value)} required />
-                <Button type='submit' style={{ marginTop: '10px' }}>Agregar Sprint</Button>
+                <Label htmlFor='newSprintTitle'>Título:</Label>
+                <Input
+                  id='newSprintTitle'
+                  value={newSprintTitle}
+                  onChange={(e) => setNewSprintTitle(e.target.value)}
+                  required
+                />
+                <Label htmlFor='newSprintStartDate'>Fecha de Inicio:</Label>
+                <Input
+                  type='date'
+                  id='newSprintStartDate'
+                  value={newSprintStartDate}
+                  onChange={(e) => setNewSprintStartDate(e.target.value)}
+                  required
+                />
+                <Label htmlFor='newSprintEndDate'>Fecha de Fin:</Label>
+                <Input
+                  type='date'
+                  id='newSprintEndDate'
+                  value={newSprintEndDate}
+                  onChange={(e) => setNewSprintEndDate(e.target.value)}
+                  required
+                />
+                <Button type='submit' className='mt-4'>
+                  Agregar Sprint
+                </Button>
               </form>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Card to display sprint details */}
-          {currentSprint && (
+        {currentSprint && (
+          <div className='mt-6'>
             <Card>
               <CardHeader>
                 <CardTitle>Detalles del Sprint</CardTitle>
@@ -244,45 +220,23 @@ const SprintPlanning: React.FC = () => {
                 <p><strong>Título:</strong> {currentSprint.title}</p>
                 <p><strong>Fecha de Inicio:</strong> {currentSprint.start_date}</p>
                 <p><strong>Fecha de Fin:</strong> {currentSprint.end_date}</p>
-                <p><strong>Objetivos:</strong> {currentSprint.Objectives}</p>
-                <form onSubmit={handleUpdateObjectives}>
-                  <Label htmlFor='objectives'>Actualizar Objetivos:</Label>
+                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
+                <form onSubmit={handleObjectivesChange}>
                   <Textarea
-                    id='objectives'
                     value={objectives}
-                    onChange={handleObjectivesChange} // Use the new change handler
+                    onChange={handleObjectivesChange}
+                    placeholder='Actualizar objetivos'
                     required
                   />
-                  <Button type='submit' style={{ marginTop: '10px' }}>Actualizar Objetivos</Button>
+                  <Button className='mt-4' type='submit'>Guardar Objetivos</Button>
                 </form>
-                <h3>Tareas</h3>
-                <form onSubmit={handleAddTask}>
-                  <Label htmlFor='new_task'>Nueva Tarea:</Label>
-                  <Input id='new_task' value={newTask} onChange={(e) => setNewTask(e.target.value)} required />
-                  <Button type='submit' style={{ marginTop: '10px' }}>Agregar Tarea</Button>
-                </form>
-                <ul>
-                  {currentSprint.tasks && currentSprint.tasks.length > 0
-                    ? (
-                        currentSprint.tasks.map((task, index) => (
-                          <li key={index}>
-                            {task.task} - {task.status}
-                            <Button onClick={() => handleDeleteTask(index)}>Eliminar</Button>
-                          </li>
-                        ))
-                      )
-                    : (
-                      <li>No hay tareas para este sprint.</li>
-                      )}
-                </ul>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Task chart */}
-        {currentSprint && currentSprint.tasks && (
-          <div style={{ marginTop: '20px' }}>
+        {currentSprint?.tasks && (
+          <div className='mt-6'>
             <Bar data={getChartData()} options={{ responsive: true }} />
           </div>
         )}

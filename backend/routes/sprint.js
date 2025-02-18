@@ -50,7 +50,7 @@ router.post('/add-task', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'INSERT INTO Task (sprint_id, task, user_id, status, active) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO Sprint_backlog (sprint_id, task, user_id, status, active) VALUES (?, ?, ?, ?, ?)',
       [sprint_id, task, user_id, status, active]
     )
     console.log('Insert result:', result) // Debug log
@@ -60,6 +60,20 @@ router.post('/add-task', async (req, res) => {
   } catch (error) {
     console.error('Error adding task:', error)
     res.status(500).json({ error: 'An error occurred while adding the task.' })
+  }
+})
+
+// Route to show all tasks across all sprints
+router.get('/all-tasks', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM Sprint_backlog'
+    )
+
+    res.status(200).json({ tasks: rows })
+  } catch (error) {
+    console.error('Error fetching all tasks:', error)
+    res.status(500).json({ error: 'An error occurred while fetching all tasks.' })
   }
 })
 

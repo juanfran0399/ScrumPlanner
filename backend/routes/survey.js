@@ -4,29 +4,33 @@ import pool from '../database.js'
 const router = express.Router()
 
 // Insert new survey data (POST)
-router.post('/survey', async (req, res) => {
-  const { id_usuario, puntaje } = req.body
+router.post('/save', async (req, res) => {
+  const { id_usuario, puntaje, respuestas } = req.body
 
   try {
-    // Execute the query to insert the survey data
-    const [result] = await pool.query(
-      'INSERT INTO Encuesta (id_usuario, puntaje) VALUES (?, ?)', [id_usuario, puntaje]
+    // Save total score
+    await pool.query('INSERT INTO Encuesta (id_usuario, puntaje) VALUES (?, ?)', [id_usuario, puntaje])
+
+    // Save individual responses
+    const answerPromises = respuestas.map(respuesta =>
+      pool.query('INSERT INTO Encuesta_respuesta (id_usuario, id_pregunta, respuesta) VALUES (?, ?, ?)', [
+        id_usuario,
+        respuesta.id_pregunta,
+        respuesta.respuesta
+      ])
     )
 
-    // Check if any rows were affected
-    if (result.affectedRows > 0) {
-      res.json({ success: true, id_usuario, puntaje })
-    } else {
-      res.status(400).json({ success: false, message: 'Failed to insert survey data' })
-    }
+    await Promise.all(answerPromises)
+
+    res.json({ success: true, message: 'Survey submitted successfully' })
   } catch (error) {
-    console.error('Error inserting survey data:', error)
-    res.status(500).json({ success: false, message: 'Internal server error' })
+    console.error('Error saving survey:', error)
+    res.status(500).json({ success: false, message: 'Error submitting survey' })
   }
 })
 
 // Check if survey exists (POST)
-router.post('/chek', async (req, res) => {
+router.post('/check', async (req, res) => {
   const { id_usuario } = req.body
 
   try {
@@ -48,11 +52,12 @@ router.post('/chek', async (req, res) => {
   }
 })
 
+// Insert new team data (POST)
 router.post('/team', async (req, res) => {
   const { name, description } = req.body
 
   try {
-    // Execute the query to insert the survey data
+    // Execute the query to insert the team data
     const [result] = await pool.query(
       'INSERT INTO Equipos (name, description) VALUES (?, ?)', [name, description]
     )
@@ -61,10 +66,10 @@ router.post('/team', async (req, res) => {
     if (result.affectedRows > 0) {
       res.json({ success: true, name, description })
     } else {
-      res.status(400).json({ success: false, message: 'Failed to insert survey data' })
+      res.status(400).json({ success: false, message: 'Failed to insert team data' })
     }
   } catch (error) {
-    console.error('Error inserting survey data:', error)
+    console.error('Error inserting team data:', error)
     res.status(500).json({ success: false, message: 'Internal server error' })
   }
 })

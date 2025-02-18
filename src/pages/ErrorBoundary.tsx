@@ -19,11 +19,11 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true }
   }
 
-  componentDidCatch (error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch (error: Error, errorInfo: ErrorInfo): void {
     console.error('Uncaught error:', error, errorInfo)
   }
 
-  render () {
+  render (): React.ReactNode {
     if (this.state.hasError) {
       return <h1>Something went wrong.</h1>
     }

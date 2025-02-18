@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import Layout from '@/components/Layout'
@@ -7,8 +7,8 @@ import Chart from 'chart.js/auto'
 
 const Analysis = () => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
-  const [selectedTask, setSelectedTask] = useState<string | null>(null)
-  const [selectedCard, setSelectedCard] = useState<string | null>(null)
+  const [setSelectedTask] = useState<string | null>(null)
+  const [setSelectedCard] = useState<string | null>(null)
   const [fadeState, setFadeState] = useState<'enter' | 'exit'>('enter') // for managing transitions
 
   const chartRef = useRef<HTMLCanvasElement>(null)
@@ -21,8 +21,6 @@ const Analysis = () => {
     'Sitio Web de Comercio Electrónico': ['Tarea 9', 'Tarea 10'],
     'Sistema de Reservas de Hotel': ['Tarea 11', 'Tarea 12']
   }
-
-  const cards = ['0', '0.5', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '∞']
 
   // Function to initialize or update the chart
   const createChart = () => {

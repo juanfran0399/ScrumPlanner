@@ -167,7 +167,7 @@ const EncuestaPage = () => {
       const userIdAsInt = parseInt(userId || '0', 10)
 
       try {
-        const response = await axios.post('http://localhost:5000/api/survey/chek', {
+        const response = await axios.post('http://localhost:5000/api/survey/check', {
           id_usuario: userIdAsInt
         })
 
@@ -194,7 +194,7 @@ const EncuestaPage = () => {
   }
 
   const handleSubmit = async () => {
-    const unanswered = preguntas.some(pregunta => !selectedScores[pregunta.id])
+    const unanswered = preguntas.some(pregunta => selectedScores[pregunta.id] == null)
 
     if (unanswered) {
       setError('Por favor, responde todas las preguntas antes de enviar.')
@@ -208,11 +208,18 @@ const EncuestaPage = () => {
 
     const userIdAsInt = parseInt(userId || '0', 10)
 
+    // Create an array of answers with question_id and selected score
+    const respuestas = preguntas.map(pregunta => ({
+      id_pregunta: pregunta.id,
+      respuesta: selectedScores[pregunta.id] || 0
+    }))
+
     try {
       if (!alreadySubmitted) {
-        const response = await axios.post('http://localhost:5000/api/survey/survey', {
+        const response = await axios.post('http://localhost:5000/api/survey/save', {
           id_usuario: userIdAsInt,
-          puntaje: score
+          puntaje: score,
+          respuestas // Send individual answers
         })
 
         if (!response.data.success) {
