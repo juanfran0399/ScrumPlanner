@@ -52,6 +52,28 @@ router.post('/check', async (req, res) => {
   }
 })
 
+router.post('/check2', async (req, res) => {
+  const { id_usuario } = req.body
+
+  try {
+    console.log('Checking survey for user_id:', user_id)
+    const [rows] = await pool.query(
+      'SELECT user_id FROM Miembros WHERE user_id = ?', [user_id]
+    )
+
+    if (rows.length > 0) {
+      console.log('Survey found for user_id:', user_id)
+      res.json({ success: true, user_id: rows[0].user_id })
+    } else {
+      console.log('Survey not found for user_id:', user_id)
+      res.status(404).json({ success: false, message: 'Survey not found' })
+    }
+  } catch (error) {
+    console.error('Error checking survey existence:', error)
+    res.status(500).json({ success: false, message: 'Internal server error' })
+  }
+})
+
 // Insert new team data (POST)
 router.post('/team', async (req, res) => {
   const { name, description } = req.body

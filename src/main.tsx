@@ -17,6 +17,18 @@ import Analysis from './pages/Analysis'
 import Retrospective from './pages/Retrospective'
 import Projection from './pages/Projection'
 
+// Function to clear cookies
+const clearCookies = () => {
+  document.cookie.split(';').forEach((cookie) => {
+    document.cookie = cookie
+      .replace(/^ +/, '') // Remove leading spaces
+      .replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/') // Expire the cookie
+  })
+}
+
+// Call clearCookies when the page loads
+clearCookies()
+
 const router = createBrowserRouter([
   {
     path: '/',

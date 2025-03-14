@@ -5,6 +5,7 @@ import surveyRoutes from './routes/survey.js'
 import teamRoutes from './routes/team.js'
 import sprintRoutes from './routes/sprint.js'
 import plannerRoutes from './routes/planner.js'
+import miembrosRoutes from './routes/miembros.js'
 
 const app = express()
 
@@ -18,6 +19,7 @@ app.use('/api/survey', surveyRoutes)
 app.use('/api/team', teamRoutes)
 app.use('/api/sprint', sprintRoutes)
 app.use('/api/planner', plannerRoutes)
+app.use('/api/miembros', miembrosRoutes)
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {

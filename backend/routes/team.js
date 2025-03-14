@@ -21,6 +21,57 @@ router.post('/add', async (req, res) => {
   }
 })
 
+// Route to check if a user is a member of a team and return team details
+router.get('/ismember', async (req, res) => {
+  const { user_id } = req.body
+
+  try {
+    // Check if the user is already a member of a team
+    const [existingMember] = await pool.query(
+      'SELECT team_id FROM Miembros WHERE user_id = ? AND active = 1',
+      [user_id]
+    )
+
+    if (existingMember.length === 0) {
+      return res.status(400).json({ message: 'User is not a member of any team.' })
+    }
+
+    const teamId = existingMember[0].team_id
+
+    // Get team details
+    const [team] = await pool.query(
+      'SELECT name, description FROM Equipos WHERE team_id = ?',
+      [teamId]
+    )
+
+    if (team.length === 0) {
+      return res.status(400).json({ message: 'Team not found.' })
+    }
+
+    // Get team members
+    const [members] = await pool.query(
+      `SELECT U.nombre FROM Miembros M 
+      JOIN Usuario U ON M.user_id = U.id_usuario 
+      WHERE M.team_id = ? AND M.active = 1`,
+      [teamId]
+    )
+
+    return res.json({
+      success: true,
+      message: 'User is a member of the team.',
+      team: {
+        team_id: teamId,
+        name: team[0].name,
+        description: team[0].description,
+        members
+      }
+    })
+  } catch (error) {
+    console.error('Error checking team membership:', error)
+    return res.status(500).json({ success: false, message: 'An error occurred while checking membership.' })
+  }
+})
+
 // Route to join a team
 router.post('/join', async (req, res) => {
   console.log('Joining team with:', req.body)

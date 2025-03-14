@@ -20,6 +20,7 @@ const TaskManagerPlanner = () => {
   const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
+  const [teamMembers, setTeamMembers] = useState([])
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -81,6 +82,18 @@ const TaskManagerPlanner = () => {
       }
     } catch (error) {
       console.error('Error updating task status:', error)
+    }
+  }
+
+  const fetchTeamMembers = async () => {
+    const teamId = localStorage.getItem('team_id')
+    if (!teamId) return
+
+    try {
+      const response = await axios.get(`/api/team/members/${teamId}`)
+      setTeamMembers(response.data.members)
+    } catch (error) {
+      console.error('Error fetching team members:', error)
     }
   }
 
@@ -175,7 +188,9 @@ const TaskManagerPlanner = () => {
           <div className='mb-4'>
             <h2 className='mb-2 text-lg font-bold'>Progreso del Proyecto</h2>
             <Progress value={calculateProgress()} />
+            <p className='mt-2 text-sm font-semibold'>ID del Equipo: {localStorage.getItem('team_id')}</p>
           </div>
+
           <Card className='relative'>
             <CardHeader>
               <CardTitle>Gestor de Tareas</CardTitle>
