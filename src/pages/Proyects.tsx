@@ -21,6 +21,7 @@ const TaskManagerPlanner = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
   const [teamMembers, setTeamMembers] = useState([])
+  const [selectedMember, setSelectedMember] = useState(null)
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -34,6 +35,7 @@ const TaskManagerPlanner = () => {
     }
 
     fetchTasks()
+    fetchTeamMembers()
   }, [])
 
   const addTask = async () => {
@@ -88,12 +90,16 @@ const TaskManagerPlanner = () => {
   const fetchTeamMembers = async () => {
     const teamId = localStorage.getItem('team_id')
     if (!teamId) return
-
+  
     try {
-      const response = await axios.get(`/api/team/members/${teamId}`)
-      setTeamMembers(response.data.members)
+      const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
+      const data = await response.json()
+      
+      console.log('Fetched team members:', data.members) // Debugging line
+      setTeamMembers(data.members || [])
     } catch (error) {
       console.error('Error fetching team members:', error)
+      setTeamMembers([])
     }
   }
 

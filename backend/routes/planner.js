@@ -49,7 +49,7 @@ router.post('/tasks', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO tasks (title, description, status, assignedTo, complexity) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO tasks (title, description, status, assignedTo, complexity, compleated) VALUES (?, ?, ?, ?, ?, 0)',
       [title, description, status, assignedTo || null, complexity]
     )
 
