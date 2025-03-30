@@ -14,7 +14,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 
 const API_BASE_URL = 'http://localhost:5000/api/planner'
 const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
-const complexityOptions = ['Baja', 'Media', 'Alta']
+const complexityOptions = ['Basica', 'Moderada', 'Intermedia', 'Avanzada', 'Epica']
 
 const TaskManagerPlanner = () => {
   const [tasks, setTasks] = useState([])
@@ -31,6 +31,20 @@ const TaskManagerPlanner = () => {
         setTasks(data.tasks)
       } catch (error) {
         console.error('Error fetching tasks:', error)
+      }
+    }
+
+    const fetchTeamMembers = async () => {
+      const teamId = localStorage.getItem('team_id')
+      if (!teamId) return
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
+        const data = await response.json()
+        console.log('Fetched team members:', data.members)
+        setTeamMembers(data.members || [])
+      } catch (error) {
+        console.error('Error fetching team members:', error)
       }
     }
 
@@ -90,11 +104,11 @@ const TaskManagerPlanner = () => {
   const fetchTeamMembers = async () => {
     const teamId = localStorage.getItem('team_id')
     if (!teamId) return
-  
+
     try {
       const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
       const data = await response.json()
-      
+
       console.log('Fetched team members:', data.members) // Debugging line
       setTeamMembers(data.members || [])
     } catch (error) {
@@ -195,6 +209,12 @@ const TaskManagerPlanner = () => {
             <h2 className='mb-2 text-lg font-bold'>Progreso del Proyecto</h2>
             <Progress value={calculateProgress()} />
             <p className='mt-2 text-sm font-semibold'>ID del Equipo: {localStorage.getItem('team_id')}</p>
+            <h2 className='mb-2 text-lg font-bold'>Miembros del equipo:</h2>
+            <ul>
+              {teamMembers.map((member, index) => (
+                <li key={index}>{member.nombre}</li> // Muestra el nombre de cada miembro
+              ))}
+            </ul>
           </div>
 
           <Card className='relative'>
@@ -238,12 +258,22 @@ const TaskManagerPlanner = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      type='text'
-                      placeholder='Asignado a'
+
+                    <Select
                       value={newTask.assignedTo}
-                      onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
-                    />
+                      onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder='Asignar a' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMembers.map((member) => (
+                          <SelectItem key={member.nombre} value={member.nombre}>
+                            {member.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button onClick={addTask} className='px-4 py-2'>
                       Añadir
                     </Button>

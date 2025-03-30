@@ -1,15 +1,45 @@
 import express from 'express'
 import pool from '../database.js'
+import KNN from 'ml-knn'
 
 const router = express.Router()
+
+// Training data for KNN
+const trainingData = [
+  { responses: [4, 3, 4, 4, 3, 4, 2, 4, 4, 3, 4, 4, 4], role: 'Scrum Owner' },
+  { responses: [3, 2, 3, 3, 2, 3, 3, 3, 3, 2, 3, 3, 3], role: 'Scrum Master' },
+  { responses: [2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2], role: 'Developer' }
+]
+
+const trainingFeatures = trainingData.map(data => data.responses)
+const trainingLabels = trainingData.map(data => data.role)
+const knn = new KNN(trainingFeatures, trainingLabels)
 
 // Insert new survey data (POST)
 router.post('/save', async (req, res) => {
   const { id_usuario, puntaje, respuestas } = req.body
 
   try {
-    // Save total score
-    await pool.query('INSERT INTO Encuesta (id_usuario, puntaje) VALUES (?, ?)', [id_usuario, puntaje])
+    // Convert user responses to numeric values for prediction
+    const userResponses = respuestas.map(respuesta => {
+      switch (respuesta.respuesta) {
+        case 'Muy efectivo/a': return 4
+        case 'Bastante efectivo/a': return 3
+        case 'Poco efectivo/a': return 2
+        case 'Nada efectivo/a': return 1
+        default: return 0
+      }
+    })
+
+    // Predict Role using KNN
+    const [predictedRole] = knn.predict([userResponses])
+    console.log(`Predicted Role for user ${id_usuario}:`, predictedRole)
+
+    // Save total score and predicted role
+    await pool.query(
+      'INSERT INTO Encuesta (id_usuario, puntaje, role) VALUES (?, ?, ?)',
+      [id_usuario, puntaje, predictedRole]
+    )
 
     // Save individual responses
     const answerPromises = respuestas.map(respuesta =>
@@ -22,7 +52,7 @@ router.post('/save', async (req, res) => {
 
     await Promise.all(answerPromises)
 
-    res.json({ success: true, message: 'Survey submitted successfully' })
+    res.json({ success: true, message: 'Survey submitted successfully', role: predictedRole })
   } catch (error) {
     console.error('Error saving survey:', error)
     res.status(500).json({ success: false, message: 'Error submitting survey' })

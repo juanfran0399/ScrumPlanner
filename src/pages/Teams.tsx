@@ -21,8 +21,12 @@ const Teams = () => {
 
   useEffect(() => {
     const storedUserId = parseInt(localStorage.getItem('id_usuario') || '', 10)
+    const storedTeamId = localStorage.getItem('team_id') || ''
+
     if (storedUserId) setUserId(storedUserId)
+    if (storedTeamId) setSelectedTeam(storedTeamId) // Automatically select the team
   }, [])
+
 
   useEffect(() => {
     const fetchTeams = async () => {

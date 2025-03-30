@@ -28,14 +28,30 @@ router.post('/add-sprint', async (req, res) => {
 // Route to modify sprint objectives
 router.put('/update-objective', async (req, res) => {
   const { sprint_id, objectives } = req.body
+  console.log('Updating Sprint ID:', sprint_id, 'with Objectives:', objectives)
+
+  // Ensure that sprint_id and objectives are provided
+  if (!sprint_id) {
+    return res.status(400).json({ error: 'Sprint ID is required' })
+  }
 
   try {
-    // Ensure the query uses the correct column name (`objectives`).
-    const result = await pool.query(
-      'UPDATE Sprint SET Objectives = ? WHERE sprint_id = ?',
+    // Step 1: Check if the objectives field is empty
+    if (!objectives) {
+      return res.status(400).json({ error: 'Objectives cannot be empty' })
+    }
+
+    // Step 2: Try updating the objectives field first
+    const updateResult = await pool.query(
+      'UPDATE Sprint SET objectives = ? WHERE sprint_id = ?',
       [objectives, sprint_id]
     )
-    console.log('Update result:', result) // Debug log
+
+    console.log('Update result:', updateResult) // Debug log
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ error: 'Sprint not found or no changes made' })
+    }
 
     res.status(200).json({ message: 'Sprint objective updated successfully' })
   } catch (error) {

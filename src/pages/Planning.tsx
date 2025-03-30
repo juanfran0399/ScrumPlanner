@@ -29,7 +29,7 @@ const SprintPlanning: React.FC = () => {
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
   const [newTask, setNewTask] = useState<string>('')
-  const [objectives, setObjectives] = useState<string>('')
+  const [objectives, setObjectives] = useState<string>('') // Ensure the objectives are initialized properly
   const [newSprintTitle, setNewSprintTitle] = useState<string>('')
   const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
   const [newSprintEndDate, setNewSprintEndDate] = useState<string>('')
@@ -40,6 +40,29 @@ const SprintPlanning: React.FC = () => {
     const storedUserId = parseInt(localStorage.getItem('id_usuario') || '0', 10)
     if (storedUserId) setUserId(storedUserId)
   }, [])
+
+  useEffect(() => {
+    if (currentSprint) {
+      console.log('Current Sprint:', currentSprint)
+      setObjectives(currentSprint.objectives)
+    }
+  }, [selectedSprintIndex, sprints])
+
+  useEffect(() => {
+    // Check if there is a stored selected sprint index in localStorage
+    const storedSprintIndex = localStorage.getItem('selectedSprintIndex')
+    if (storedSprintIndex) {
+      const index = parseInt(storedSprintIndex, 10)
+      setSelectedSprintIndex(index)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (currentSprint) {
+      // Store the current sprint's ID in localStorage when selectedSprintIndex changes
+      localStorage.setItem('selectedSprintId', String(currentSprint.id))
+    }
+  }, [selectedSprintIndex, sprints])
 
   useEffect(() => {
     if (userId) {
@@ -61,6 +84,10 @@ const SprintPlanning: React.FC = () => {
     try {
       const { data } = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
       setSprints(data.sprints)
+      if (data.sprints.length > 0) {
+        const currentSprint = data.sprints[selectedSprintIndex]
+        setObjectives(currentSprint.objectives || '') // Set objectives based on the current sprint
+      }
     } catch (error) {
       console.error('Error fetching sprints:', error)
     }
@@ -68,34 +95,16 @@ const SprintPlanning: React.FC = () => {
 
   const currentSprint = sprints[selectedSprintIndex] || null
 
+  useEffect(() => {
+    if (currentSprint) {
+      setObjectives(currentSprint.objectives)
+    }
+  }, [selectedSprintIndex, sprints])
+
   const handleObjectivesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const updatedObjectives = e.target.value
     setObjectives(updatedObjectives)
     localStorage.setItem('objectives', updatedObjectives)
-  }
-
-  const handleAddTask = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!currentSprint) return
-
-    try {
-      const { data } = await axios.post('http://localhost:5000/api/sprint/add-task', {
-        sprint_id: currentSprint.id,
-        task: newTask,
-        user_id: userId,
-        status: 'Pendiente',
-        active: true
-      })
-
-      setSprints(
-        sprints.map((sprint, index) =>
-          index === selectedSprintIndex ? { ...sprint, tasks: [...sprint.tasks, data] } : sprint
-        )
-      )
-      setNewTask('')
-    } catch (error) {
-      console.error('Error adding task:', error)
-    }
   }
 
   const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
@@ -115,6 +124,34 @@ const SprintPlanning: React.FC = () => {
       setNewSprintEndDate('')
     } catch (error) {
       console.error('Error adding sprint:', error)
+    }
+  }
+
+  const handleSaveObjectives = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!currentSprint || !currentSprint.sprint_id) {
+      console.error('Sprint ID is required') // Log the error if no sprint ID is found
+      return
+    }
+
+    try {
+      console.log('Saving objectives:', objectives, 'for Sprint ID:', currentSprint.sprint_id) // Debug log
+
+      await axios.put('http://localhost:5000/api/sprint/update-objective', {
+        sprint_id: currentSprint.sprint_id,
+        objectives
+      })
+
+      // Update the local sprints state after successfully saving the objectives
+      setSprints(
+        sprints.map((sprint, index) =>
+          index === selectedSprintIndex ? { ...sprint, objectives } : sprint
+        )
+      )
+      console.log('Sprint objectives updated successfully')
+    } catch (error) {
+      console.error('Error updating objectives:', error)
     }
   }
 
@@ -220,8 +257,8 @@ const SprintPlanning: React.FC = () => {
                 <p><strong>Título:</strong> {currentSprint.title}</p>
                 <p><strong>Fecha de Inicio:</strong> {currentSprint.start_date}</p>
                 <p><strong>Fecha de Fin:</strong> {currentSprint.end_date}</p>
-                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
-                <form onSubmit={handleObjectivesChange}>
+                <p><strong>Objetivos:</strong> {currentSprint.Objectives}</p>
+                <form onSubmit={handleSaveObjectives}>
                   <Textarea
                     value={objectives}
                     onChange={handleObjectivesChange}
