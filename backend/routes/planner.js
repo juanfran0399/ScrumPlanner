@@ -17,31 +17,9 @@ router.get('/tasks', async (req, res) => {
   }
 })
 
-// Route to fetch a single task by ID
-router.get('/tasks/:id', async (req, res) => {
-  const id = Number(req.params.id)
-
-  if (isNaN(id)) {
-    return res.status(400).json({ error: 'Invalid task ID' })
-  }
-
-  try {
-    const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id])
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' })
-    }
-
-    res.status(200).json({ task: rows[0] })
-  } catch (error) {
-    console.error('Error fetching task:', error)
-    res.status(500).json({ error: 'An error occurred while fetching the task.' })
-  }
-})
-
 // Route to add a new task
 router.post('/tasks', async (req, res) => {
-  const { title, description, status, assignedTo, complexity } = req.body
+  const { title, description, status, assignedTo, complexity, sprint } = req.body
 
   if (!title || !description || !status || !complexity) {
     return res.status(400).json({ error: 'Missing required fields' })
@@ -49,8 +27,8 @@ router.post('/tasks', async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO tasks (title, description, status, assignedTo, complexity, compleated) VALUES (?, ?, ?, ?, ?, 0)',
-      [title, description, status, assignedTo || null, complexity]
+      'INSERT INTO tasks (title, description, status, assignedTo, complexity, sprint_id, compleated) VALUES (?, ?, ?, ?, ?, ?, 0)',
+      [title, description, status, assignedTo || null, complexity, sprint]
     )
 
     res.status(201).json({ message: 'Task added successfully', taskId: result.insertId })
@@ -115,6 +93,32 @@ router.delete('/tasks/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting task:', error)
     res.status(500).json({ error: 'An error occurred while deleting the task.' })
+  }
+})
+
+router.put('/tasks/complete', async (req, res) => {
+  const { id } = req.body
+  const taskId = Number(id)
+
+  // Validate that id is provided and is a valid number
+  if (!id || isNaN(taskId)) {
+    return res.status(400).json({ error: 'Invalid or missing task ID' })
+  }
+
+  try {
+    const [result] = await pool.query(
+      'UPDATE tasks SET compleated = 1 WHERE id_serial = ? AND compleated = 0',
+      [taskId]
+    )
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Task not found or already completed' })
+    }
+
+    res.status(200).json({ message: 'Task marked as completed successfully', taskId })
+  } catch (error) {
+    console.error('Error marking task as completed:', error)
+    res.status(500).json({ error: 'An error occurred while updating the task completion.' })
   }
 })
 

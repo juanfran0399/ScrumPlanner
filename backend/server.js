@@ -6,6 +6,7 @@ import teamRoutes from './routes/team.js'
 import sprintRoutes from './routes/sprint.js'
 import plannerRoutes from './routes/planner.js'
 import miembrosRoutes from './routes/miembros.js'
+import analysis from './routes/analysis.js'
 import pool from './database.js'
 import KNN from 'ml-knn'
 
@@ -22,6 +23,7 @@ app.use('/api/team', teamRoutes)
 app.use('/api/sprint', sprintRoutes)
 app.use('/api/planner', plannerRoutes)
 app.use('/api/miembros', miembrosRoutes)
+app.use('/api/analysis', analysis)
 
 const trainingData = [
   { responses: [4, 3, 4, 4, 3, 4, 2, 4, 4, 3, 4, 4, 4], role: 'Scrum Owner' },

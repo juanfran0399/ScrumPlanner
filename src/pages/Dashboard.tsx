@@ -69,14 +69,14 @@ const Content = (): ReactNode => {
             <CardTitle>
               Scrum Planner{' '}
               {userId
-? (
-                <span className='text-sm text-muted'>
-                  ({userId}{teamId ? ` | Team ID: ${teamId}` : ''})
-                </span>
-              )
-: (
-                <span className='text-sm text-muted'>(Guest)</span>
-              )}
+                ? (
+                  <span className='text-sm text-muted'>
+                    ({userId}{teamId ? ` | Team ID: ${teamId}` : ''})
+                  </span>
+                  )
+                : (
+                  <span className='text-sm text-muted'>(Guest)</span>
+                  )}
             </CardTitle>
           </CardHeader>
           <CardContent>

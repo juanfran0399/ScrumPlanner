@@ -18,10 +18,11 @@ const complexityOptions = ['Basica', 'Moderada', 'Intermedia', 'Avanzada', 'Epic
 
 const TaskManagerPlanner = () => {
   const [tasks, setTasks] = useState([])
-  const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', complexity: '', assignedTo: '', sprint: '' })
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
   const [teamMembers, setTeamMembers] = useState([])
-  const [selectedMember, setSelectedMember] = useState(null)
+  const [sprints, setSprints] = useState([])
+  const [selectedSprint, setSelectedSprint] = useState(null)
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -41,15 +42,33 @@ const TaskManagerPlanner = () => {
       try {
         const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
         const data = await response.json()
-        console.log('Fetched team members:', data.members)
-        setTeamMembers(data.members || [])
+        const members = data.members || []
+        setTeamMembers(members)
+
+        // Save team members in localStorage
+        localStorage.setItem('team_members', JSON.stringify(members))
       } catch (error) {
         console.error('Error fetching team members:', error)
       }
     }
 
+    const fetchSprints = async () => {
+      const teamId = localStorage.getItem('team_id')
+      if (!teamId) return
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+        const data = await response.json()
+        setSprints(data.sprints || [])
+        localStorage.setItem('sprints', JSON.stringify(data.sprints || [])) // Save to localStorage
+      } catch (error) {
+        console.error('Error fetching sprints:', error)
+      }
+    }
+
     fetchTasks()
     fetchTeamMembers()
+    fetchSprints()
   }, [])
 
   const addTask = async () => {
@@ -59,7 +78,8 @@ const TaskManagerPlanner = () => {
         description: newTask.description,
         status: 'Backlog',
         assignedTo: newTask.assignedTo,
-        complexity: newTask.complexity
+        complexity: newTask.complexity,
+        sprint: selectedSprint
       }
 
       try {
@@ -72,8 +92,9 @@ const TaskManagerPlanner = () => {
         if (response.ok) {
           const { taskId } = await response.json()
           setTasks((prevTasks) => [...prevTasks, { ...newTaskData, id: taskId }])
-          setNewTask({ title: '', description: '', complexity: 'Baja', assignedTo: 'No asignado' })
+          setNewTask({ title: '', description: '', complexity: '', assignedTo: '', sprint: '' })
           setIsNewTaskDialogOpen(false)
+          window.location.reload()
         }
       } catch (error) {
         console.error('Error adding task:', error)
@@ -87,11 +108,11 @@ const TaskManagerPlanner = () => {
       const response = await fetch(`${API_BASE_URL}/tasks`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload) // Send the payload
+        body: JSON.stringify(payload)
       })
       if (response.ok) {
         setTasks((prevTasks) =>
-          prevTasks.map((task) => (task.id_serial === taskId ? { ...task, status: newStatus } : task)) // Update the task status locally
+          prevTasks.map((task) => (task.id_serial === taskId ? { ...task, status: newStatus } : task))
         )
       } else {
         console.error('Failed to update task status')
@@ -101,45 +122,10 @@ const TaskManagerPlanner = () => {
     }
   }
 
-  const fetchTeamMembers = async () => {
-    const teamId = localStorage.getItem('team_id')
-    if (!teamId) return
-
-    try {
-      const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
-      const data = await response.json()
-
-      console.log('Fetched team members:', data.members) // Debugging line
-      setTeamMembers(data.members || [])
-    } catch (error) {
-      console.error('Error fetching team members:', error)
-      setTeamMembers([])
-    }
-  }
-
-  const deleteTask = async (taskId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setTasks((prevTasks) => prevTasks.filter((task) => task.id_serial !== taskId))
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to delete task:', errorData.error)
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error)
-    }
-  }
-
   const TaskCard = ({ task }) => {
-    console.log('Task in TaskCard:', task)
-
     const [{ isDragging }, drag] = useDrag(() => ({
       type: 'task',
-      item: { id: task?.id_serial }, // Safely access task.id
+      item: { id: task?.id_serial },
       collect: (monitor) => ({ isDragging: !!monitor.isDragging() })
     }))
 
@@ -157,10 +143,6 @@ const TaskManagerPlanner = () => {
               <Badge variant='outline' style={getComplexityBadgeStyle(task.complexity)}>
                 {task.complexity}
               </Badge>
-              <Button variant='destructive' size='sm' onClick={async () => await deleteTask(task.id_serial)}>
-                Eliminar
-              </Button>
-
             </div>
           </CardContent>
         </Card>
@@ -172,10 +154,8 @@ const TaskManagerPlanner = () => {
     const [, drop] = useDrop({
       accept: 'task',
       drop: async (item) => {
-        console.log('Dropped item:', item) // Debugging: Ensure item contains id
-
         if (item?.id) {
-          await moveTask(item.id, status) // Send the task ID correctly
+          await moveTask(item.id, status)
         } else {
           console.error('Task ID is missing!')
         }
@@ -192,11 +172,14 @@ const TaskManagerPlanner = () => {
 
   const filterTasksByStatus = (status) => tasks.filter((task) => task.status === status)
   const calculateProgress = () => (tasks.length === 0 ? 0 : (filterTasksByStatus('Terminado').length / tasks.length) * 100)
+
   const getComplexityBadgeStyle = (complexity) => {
     switch (complexity) {
-      case 'Baja': return { backgroundColor: '#d4edda', color: '#155724' }
-      case 'Media': return { backgroundColor: '#fff3cd', color: '#856404' }
-      case 'Alta': return { backgroundColor: '#f8d7da', color: '#721c24' }
+      case 'Basica': return { backgroundColor: '#d4edda', color: '#155724' }
+      case 'Moderada': return { backgroundColor: '#d4edda', color: '#155724' }
+      case 'Intermedia': return { backgroundColor: '#fff3cd', color: '#856404' }
+      case 'Avanzada': return { backgroundColor: '#fff3cd', color: '#856404' }
+      case 'Epica': return { backgroundColor: '#f8d7da', color: '#721c24' }
       default: return {}
     }
   }
@@ -212,7 +195,7 @@ const TaskManagerPlanner = () => {
             <h2 className='mb-2 text-lg font-bold'>Miembros del equipo:</h2>
             <ul>
               {teamMembers.map((member, index) => (
-                <li key={index}>{member.nombre}</li> // Muestra el nombre de cada miembro
+                <li key={index}>{member.nombre}</li>
               ))}
             </ul>
           </div>
@@ -270,6 +253,24 @@ const TaskManagerPlanner = () => {
                         {teamMembers.map((member) => (
                           <SelectItem key={member.nombre} value={member.nombre}>
                             {member.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={newTask.sprint_id}
+                      onValueChange={(value) => {
+                        setSelectedSprint(value)
+                        localStorage.setItem('selected_sprint', value) // Save selected sprint to localStorage
+                      }}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder='Seleccionar Sprint' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sprints.map((sprint) => (
+                          <SelectItem key={sprint.sprint_id} value={sprint.sprint_id}>
+                            {sprint.title}
                           </SelectItem>
                         ))}
                       </SelectContent>
