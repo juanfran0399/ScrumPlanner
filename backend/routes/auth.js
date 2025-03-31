@@ -1,7 +1,7 @@
 import express from 'express'
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import db from '../database.js' // Make sure this file has the .js extension
 import pool from '../database.js'
 

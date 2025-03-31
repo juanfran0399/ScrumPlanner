@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import video from '@/assets/media/Udg.mp4'
 import LogoUDG from '@/assets/images/favicon.png'
 import useAuthStore from '@/stores/useAuthStore'
@@ -13,16 +12,11 @@ import { useNavigate } from 'react-router-dom'
 const LoginForm = (): JSX.Element => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [userNameError, setUserNameError] = useState(false)
-  const [passwordError, setPasswordError] = useState(false)
-  const [loginError, setLoginError] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [rememberMe, setRememberMe] = useState(localStorage.getItem('rememberMe') === 'true')
-  const [registerModalOpen, setRegisterModalOpen] = useState(false)
-  const [forgotPasswordModalOpen, setForgotPasswordModalOpen] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetError, setResetError] = useState(false)
-  const [resetSuccess, setResetSuccess] = useState(false)
+  const [userNameError, setUserNameError] = useState<boolean>(false)
+  const [passwordError, setPasswordError] = useState<boolean>(false)
+  const [loginError, setLoginError] = useState<boolean>(false)
+  const [processing, setProcessing] = useState<boolean>(false)
+  const [rememberMe, setRememberMe] = useState<boolean>(localStorage.getItem('rememberMe') === 'true')
 
   const login = useAuthStore((state) => state.login)
   const navigate = useNavigate()
@@ -30,25 +24,53 @@ const LoginForm = (): JSX.Element => {
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
     const userId = localStorage.getItem('id_usuario')
+
     if (isLoggedIn && userId) {
-      navigate('/dashboard')
+      navigate('/dashboard') // Redirect if user is logged in
     }
   }, [])
 
-  const handleForgotPassword = async () => {
-    setProcessing(true)
-    try {
-      const response = await axios.post('http://localhost:5000/api/auth/forgot-password', { email: resetEmail })
-      if (response.data.success) {
-        setResetSuccess(true)
-        setResetError(false)
-      } else {
-        setResetError(true)
-      }
-    } catch (error) {
-      setResetError(true)
+  const handleSubmit = async (): Promise<void> => {
+    if (username.trim() === '') {
+      setUserNameError(true)
     }
-    setProcessing(false)
+    if (password.trim() === '') {
+      setPasswordError(true)
+    }
+    if (username.trim() !== '' && password.trim() !== '') {
+      setProcessing(true)
+      try {
+        const response = await axios.post('http://localhost:5000/api/auth/login', {
+          username,
+          contrasena: password
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        if (response.data.success) {
+          const id_usuario = response.data.id_usuario
+          if (rememberMe) {
+            localStorage.setItem('user', username)
+            localStorage.setItem('id_usuario', id_usuario)
+            localStorage.setItem('isLoggedIn', 'true')
+            localStorage.setItem('rememberMe', 'true')
+          } else {
+            sessionStorage.setItem('user', username)
+            sessionStorage.setItem('id_usuario', id_usuario)
+            sessionStorage.setItem('isLoggedIn', 'true')
+          }
+          login()
+          navigate('/dashboard')
+        } else {
+          setLoginError(true)
+        }
+      } catch (error) {
+        console.error('Login error', error)
+        setLoginError(true)
+      }
+      setProcessing(false)
+    }
   }
 
   return (
@@ -60,18 +82,57 @@ const LoginForm = (): JSX.Element => {
           </picture>
           <div className='grid gap-2 text-center'>
             <h1 className='text-3xl font-bold'>Iniciar Sesión</h1>
+            <p className='text-muted-foreground'>Ingresa tus credenciales a continuación para iniciar sesión</p>
           </div>
           <div className='grid gap-4'>
-            <Label>Usuario</Label>
-            <Input value={username} onChange={(e) => { setUsername(e.target.value); setUserNameError(false) }} disabled={processing} />
-            {userNameError && <span className='text-destructive'>Es necesario que ingreses tu usuario</span>}
-            <Label>Contraseña</Label>
-            <Input type='password' value={password} onChange={(e) => { setPassword(e.target.value); setPasswordError(false) }} disabled={processing} />
-            {passwordError && <span className='text-destructive'>Es necesario que ingreses tu contraseña</span>}
-            <Button variant='link' onClick={() => setForgotPasswordModalOpen(true)}>¿Olvidaste tu contraseña?</Button>
-            <Switch checked={rememberMe} onCheckedChange={(checked) => { setRememberMe(checked); localStorage.setItem('rememberMe', checked.toString()) }} disabled={processing} />
-            <Button onClick={handleForgotPassword} disabled={processing}>Ingresar</Button>
-            <Button variant='outline' onClick={() => setRegisterModalOpen(true)}>Crear Cuenta</Button>
+            <div className='grid gap-2'>
+              <Label htmlFor='username'>Usuario</Label>
+              <Input
+                id='username'
+                type='text'
+                value={username}
+                placeholder='Código UDG'
+                onChange={(e) => {
+                  setUsername(e.target.value)
+                  setUserNameError(false)
+                }}
+                disabled={processing}
+              />
+              {userNameError && <span className='text-destructive'>Es necesario que ingreses tu usuario</span>}
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='password'>Contraseña</Label>
+              <Input
+                id='password'
+                type='password'
+                placeholder='****'
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setPasswordError(false)
+                }}
+                disabled={processing}
+              />
+              {passwordError && <span className='text-destructive'>Es necesario que ingreses tu contraseña</span>}
+            </div>
+            <div className='flex items-center justify-start'>
+              <Label htmlFor='remember-me' className='flex items-center'>Recordar mi sesión</Label>
+              <Switch
+                className='ml-2'
+                id='remember-me'
+                checked={rememberMe}
+                onCheckedChange={(checked) => {
+                  setRememberMe(checked)
+                  localStorage.setItem('rememberMe', checked.toString())
+                }}
+                disabled={processing}
+              />
+            </div>
+            {loginError && (
+              <div className='p-4 text-center rounded bg-destructive/50 text-foreground'>
+                La combinación de Usuario y Contraseña ingresada no corresponde a un usuario existente
+              </div>
+            )}
+            <Button type='submit' onClick={handleSubmit} className='w-full' disabled={processing}>Ingresar</Button>
           </div>
         </div>
       </div>
@@ -80,18 +141,6 @@ const LoginForm = (): JSX.Element => {
           <source src={video} type='video/mp4' />
         </video>
       </div>
-      <Dialog open={forgotPasswordModalOpen} onOpenChange={setForgotPasswordModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Recuperar Contraseña</DialogTitle>
-          </DialogHeader>
-          <Label>Correo Electrónico</Label>
-          <Input value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
-          {resetError && <span className='text-destructive'>Error al enviar solicitud</span>}
-          {resetSuccess && <span className='text-success'>Correo enviado con éxito</span>}
-          <Button onClick={handleForgotPassword} disabled={processing}>Enviar Instrucciones</Button>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

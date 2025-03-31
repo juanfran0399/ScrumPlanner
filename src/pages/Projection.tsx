@@ -1,194 +1,276 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Button } from '@/components/ui/button'
-import Layout from '@/components/Layout'
-import Chart from 'chart.js/auto'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import React, { useEffect, useState } from 'react';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command'
+  Card, CardContent, CardHeader, CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import Layout from '@/components/Layout';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover'
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  obtenerUsuarios,
+  obtenerTareasPorUsuario,
+} from '@/services/api';
+import {
+  calcularIndices,
+  obtenerTipoRecomendado,
+} from '@/services/predictor';
+import {
+  Command, CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar
+} from 'recharts';
 
-const names = ['Jose', 'Roberto', 'Rodrigo', 'Manuel']
-const inputs = [
-  '0.8757, 0.6846, 0.764',
-  '0.8757, 0.9846, 0.764',
-  '0.8757, 0.6846, 0.964',
-  '0.8757, 0.6846, 0.764'
-]
+interface Usuario {
+  id_usuario: number;
+  nombre: string;
+}
 
-const difficultyLabels = ['Fácil', 'Medio', 'Difícil']
+interface TareaSprint {
+  id: number;
+  usuario_id: number;
+  sprint: number;
+  [key: string]: any;
+}
 
-const Prediction: React.FC = () => {
-  const [results, setResults] = useState<string[]>(['', '', '', ''])
-  const [selectedName, setSelectedName] = useState<string | null>(null)
-  const [chartData, setChartData] = useState<number[]>(Array(names.length).fill(0))
-  const chartRef = useRef<HTMLCanvasElement>(null)
-  const chartInstanceRef = useRef<Chart | null>(null)
+const tiposNombre = ['Básicas', 'Moderadas', 'Intermedias', 'Avanzadas', 'Épicas'];
 
-  // Simulación de predicción
-  const simulatePrediction = (input: number[]) => {
-    return Math.floor(Math.random() * 3) // Valores entre 0 y 2
-  }
-
-  const fetchPrediction = async (val: number) => {
-    const input = inputs[val].split(',').map(Number)
-    const predictedClass = simulatePrediction(input)
-    const resultText = difficultyLabels[predictedClass]
-
-    setResults((prevResults) => {
-      const newResults = [...prevResults]
-      newResults[val] = resultText
-      return newResults
-    })
-
-    // Actualiza los datos del gráfico
-    setChartData((prevData) => {
-      const newData = [...prevData]
-      newData[val] = predictedClass // Guardamos el índice de la predicción
-      return newData
-    })
-  }
-
-  const handlePredictAll = () => {
-    for (let i = 0; i < names.length; i++) {
-      fetchPrediction(i)
-    }
-  }
-
-  const createChart = () => {
-    if (chartRef.current != null) {
-      const ctx = chartRef.current.getContext('2d')
-      if (ctx != null) {
-        if (chartInstanceRef.current != null) {
-          chartInstanceRef.current.destroy()
-        }
-
-        chartInstanceRef.current = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: names,
-            datasets: [{
-              label: 'Dificultad Predicha',
-              data: chartData,
-              backgroundColor: [
-                'rgba(75, 192, 192, 0.2)', // Fácil
-                'rgba(255, 206, 86, 0.2)', // Medio
-                'rgba(255, 99, 132, 0.2)' // Difícil
-              ],
-              borderColor: [
-                'rgba(75, 192, 192, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(255, 99, 132, 1)'
-              ],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: (value) => difficultyLabels[value] || value
-                }
-              }
-            }
-          }
-        })
-      }
-    }
-  }
+const SprintAudit: React.FC = () => {
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null);
+  const [tareas, setTareas] = useState<TareaSprint[]>([]);
+  const [sprintSeleccionado, setSprintSeleccionado] = useState<number | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   useEffect(() => {
-    createChart() // Actualiza el gráfico cuando se generan nuevas predicciones
-  }, [chartData])
+    obtenerUsuarios().then(res => setUsuarios(res.data));
+  }, []);
+
+  useEffect(() => {
+    if (usuarioSeleccionado) {
+      obtenerTareasPorUsuario(usuarioSeleccionado.id_usuario).then(res => setTareas(res.data));
+    }
+  }, [usuarioSeleccionado]);
+
+  const tareasDelSprint = tareas.find(t => t.sprint === sprintSeleccionado);
+  const indicesGlobales = calcularIndices(tareas);
+  const indicesSprint = tareasDelSprint ? calcularIndices([tareasDelSprint]) : [];
+
+  const chartGlobal = indicesGlobales.map((val, i) => {
+    const completadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_completadas`] || 0, 0);
+    const asignadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_asignadas`] || 0, 0);
+    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0;
+    return {
+      tipo: tiposNombre[i],
+      porcentaje: parseFloat(base.toFixed(2)),
+      ponderado: val,
+      completadas,
+      asignadas
+    };
+  });
+
+  const chartSprint = indicesSprint.map((val, i) => {
+    const completadas = tareasDelSprint?.[`t${i + 1}_completadas`] || 0;
+    const asignadas = tareasDelSprint?.[`t${i + 1}_asignadas`] || 0;
+    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0;
+    return {
+      tipo: tiposNombre[i],
+      porcentaje: parseFloat(base.toFixed(2)),
+      ponderado: val,
+      completadas,
+      asignadas
+    };
+  });
+
+  const graficoEvolucion = tareas.map((t) => {
+    const totalCompletadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_completadas`], 0);
+    const totalAsignadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_asignadas`], 0);
+    const porcentaje = totalAsignadas > 0 ? (totalCompletadas * 100) / totalAsignadas : 0;
+
+    return {
+      sprint: `Sprint ${t.sprint}`,
+      rendimiento: parseFloat(porcentaje.toFixed(2))
+    };
+  });
+
+  const tipoRecomendadoGlobal = obtenerTipoRecomendado(indicesGlobales);
+  const tipoRecomendadoSprint = obtenerTipoRecomendado(indicesSprint);
 
   return (
     <Layout>
-      <div className='container mx-auto mt-8'>
-        <Card>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">Auditoría de Sprints</h2>
+        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+          <DialogTrigger asChild>
+            <Button variant="outline">Ver cómo se calcula</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>🧠 Cómo se calculan los porcentajes</DialogTitle>
+              <DialogDescription>
+                El sistema aplica un porcentaje extra según la dificultad:
+                <ul className="mt-2 list-disc list-inside">
+                  <li>Básicas: 10%</li>
+                  <li>Moderadas: 15%</li>
+                  <li>Intermedias: 20%</li>
+                  <li>Avanzadas: 25%</li>
+                  <li>Épicas: 30%</li>
+                </ul>
+                <p className="mt-2 text-muted-foreground">Ejemplo: 6 de 6 Avanzadas = 100% + 25% = 125%</p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="mb-6">
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" className="w-full justify-between">
+              {usuarioSeleccionado ? usuarioSeleccionado.nombre : 'Selecciona un usuario'}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0">
+            <Command>
+              <CommandInput placeholder="Buscar usuario..." />
+              <CommandList>
+                {usuarios.map((user) => (
+                  <CommandItem
+                    key={user.id_usuario}
+                    value={user.nombre}
+                    onSelect={() => {
+                      setUsuarioSeleccionado(user);
+                      setPopoverOpen(false);
+                      setSprintSeleccionado(null);
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', usuarioSeleccionado?.id_usuario === user.id_usuario ? 'opacity-100' : 'opacity-0')} />
+                    {user.nombre}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {usuarioSeleccionado && tareas.length > 0 && (
+        <div className="mb-6">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {sprintSeleccionado !== null
+                  ? `Sprint ${sprintSeleccionado}`
+                  : 'Selecciona un sprint'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+              <Command>
+                <CommandInput placeholder="Buscar sprint..." />
+                <CommandList>
+                  {tareas.map((t) => (
+                    <CommandItem
+                      key={t.sprint}
+                      value={`Sprint ${t.sprint}`}
+                      onSelect={() => {
+                        setSprintSeleccionado(t.sprint);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          sprintSeleccionado === t.sprint ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      Sprint {t.sprint}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
+      
+      <Separator className="mb-4" />
+
+      {usuarioSeleccionado && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Global del Usuario</CardTitle>
+              <p className="text-muted-foreground">Recomendado: {tipoRecomendadoGlobal}</p>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1">
+                {chartGlobal.map((d, i) => (
+                  <li key={i}>{d.tipo}: {d.porcentaje}% (Ponderado: {d.ponderado}%) — {d.completadas}/{d.asignadas}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {tareasDelSprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sprint {tareasDelSprint.sprint} (Auditoría específica)</CardTitle>
+                <p className="text-muted-foreground">Recomendado: {tipoRecomendadoSprint}</p>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {chartSprint.map((d, i) => (
+                    <li key={i}>{d.tipo}: {d.porcentaje}% (Ponderado: {d.ponderado}%) — {d.completadas}/{d.asignadas}</li>
+                  ))}
+                </ul>
+
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartSprint}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="tipo" />
+                    <YAxis domain={[0, 150]} />
+                    <Tooltip />
+                    <Bar dataKey="porcentaje" fill="#2ecc71" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {usuarioSeleccionado && tareas.length > 1 && (
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Clasificación Simulada</CardTitle>
+            <CardTitle>📈 Evolución del rendimiento por Sprint</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Selecciona un nombre para ver la predicción de dificultad:</p>
-
-            {/* ComboBox para seleccionar nombres */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant='outline' className='w-[200px] justify-between'>
-                  {selectedName || 'Selecciona un nombre...'}
-                  <ChevronsUpDown className='w-4 h-4 ml-2 opacity-50 shrink-0' />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className='w-[200px] p-0'>
-                <Command>
-                  <CommandInput placeholder='Buscar nombre...' />
-                  <CommandList>
-                    <CommandEmpty>No se encontró el nombre.</CommandEmpty>
-                    <CommandGroup>
-                      {names.map((name, index) => (
-                        <CommandItem
-                          key={index}
-                          onSelect={() => {
-                            fetchPrediction(index)
-                            setSelectedName(name)
-                          }}
-                        >
-                          <Check
-                            className={`mr-2 h-4 w-4 ${selectedName === name ? 'opacity-100' : 'opacity-0'}`}
-                          />
-                          {name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            {/* Mostrar resultados */}
-            {results.some((result) => result) && (
-              <>
-                <Separator className='my-4' />
-                <div className='flex flex-wrap gap-4'>
-                  {names.map((name, index) => (
-                    <div key={index} className='m-2'>
-                      <h4>{name}: <span className='font-bold'>{results[index]}</span></h4>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Mostrar gráfico */}
-            <Separator className='my-4' />
-            <h4>Gráfico de Dificultad Predicha</h4>
-            <div className='chart-container'>
-              <canvas ref={chartRef} width='400' height='200' />
-            </div>
-
-            {/* Botón para predecir todos */}
-            <Button className='mt-6 bg-[#9A3324] text-white' onClick={handlePredictAll}>
-              Predecir Todos
-            </Button>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={graficoEvolucion}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="sprint" />
+                <YAxis domain={[0, 150]} />
+                <Tooltip />
+                <Line type="monotone" dataKey="rendimiento" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
+      )}
     </Layout>
-  )
-}
+  );
+};
 
-export default Prediction
+export default SprintAudit;

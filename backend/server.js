@@ -6,6 +6,7 @@ import teamRoutes from './routes/team.js'
 import sprintRoutes from './routes/sprint.js'
 import plannerRoutes from './routes/planner.js'
 import miembrosRoutes from './routes/miembros.js'
+import usersRoutes from './routes/users.js' // ✅ NUEVA RUTA
 import pool from './database.js'
 import KNN from 'ml-knn'
 
@@ -15,42 +16,36 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Routes
+// Rutas
 app.use('/api/auth', authRoutes)
 app.use('/api/survey', surveyRoutes)
 app.use('/api/team', teamRoutes)
 app.use('/api/sprint', sprintRoutes)
 app.use('/api/planner', plannerRoutes)
 app.use('/api/miembros', miembrosRoutes)
-// Generate a larger set of training data (100 samples)
+app.use('/api/users', usersRoutes) // ✅ Aquí conectamos las rutas de auditoría
+
+// ML Training (para encuesta)
 const roles = ['Scrum Owner', 'Scrum Master', 'Developer']
 const trainingData = []
 
 for (let i = 0; i < 100; i++) {
   const role = roles[i % roles.length]
-  const responses = Array.from({ length: 13 }, () => Math.floor(Math.random() * 4) + 1) // Random responses between 1 and 4
-
+  const responses = Array.from({ length: 13 }, () => Math.floor(Math.random() * 4) + 1)
   trainingData.push({ responses, role })
 }
 
 const trainingFeatures = trainingData.map(data => data.responses)
 const trainingLabels = trainingData.map(data => data.role)
-
-// Debugging: Check data format
-console.log('Training Features:', trainingFeatures)
-console.log('Training Labels:', trainingLabels)
-
-// Initialize and train KNN classifier
 const knn = new KNN(trainingFeatures, trainingLabels)
 
-// API Endpoint: Save Survey Responses & Predict Role
+// Endpoint encuesta
 app.post('/api/survey/save', async (req, res) => {
   const { id_usuario, puntaje, respuestas } = req.body
 
   try {
-    // Convert user responses to numeric values for prediction
-    const userResponses = respuestas.map(respuesta => {
-      switch (respuesta.respuesta) {
+    const userResponses = respuestas.map(r => {
+      switch (r.respuesta) {
         case 'Muy efectivo/a': return 4
         case 'Bastante efectivo/a': return 3
         case 'Poco efectivo/a': return 2
@@ -59,22 +54,18 @@ app.post('/api/survey/save', async (req, res) => {
       }
     })
 
-    // Predict Role using KNN
     const [predictedRole] = knn.predict([userResponses])
-    console.log(`Predicted Role for user ${id_usuario}:`, predictedRole)
 
-    // Save survey results into `Encuesta` table
     await pool.query(
       'INSERT INTO Encuesta (id_usuario, puntaje, role) VALUES (?, ?, ?)',
       [id_usuario, puntaje, predictedRole]
     )
 
-    // Save individual responses into `Encuesta_respuesta`
-    const answerPromises = respuestas.map(respuesta =>
+    const answerPromises = respuestas.map(r =>
       pool.query('INSERT INTO Encuesta_respuesta (id_usuario, id_pregunta, respuesta) VALUES (?, ?, ?)', [
         id_usuario,
-        respuesta.id_pregunta,
-        respuesta.respuesta
+        r.id_pregunta,
+        r.respuesta
       ])
     )
 
