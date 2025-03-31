@@ -109,37 +109,38 @@ const SprintAudit: React.FC = () => {
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">Auditoría de Sprints</h2>
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold text-primary">📋 Auditoría de Sprints</h2>
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button variant="outline">Ver cómo se calcula</Button>
+            <Button variant="outline">🧠 Cómo se calcula</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>🧠 Cómo se calculan los porcentajes</DialogTitle>
               <DialogDescription>
-                El sistema aplica un porcentaje extra según la dificultad:
-                <ul className="mt-2 list-disc list-inside">
-                  <li>Básicas: 10%</li>
-                  <li>Moderadas: 15%</li>
-                  <li>Intermedias: 20%</li>
-                  <li>Avanzadas: 25%</li>
-                  <li>Épicas: 30%</li>
+                <p className="mb-2">El sistema aplica un porcentaje extra según la dificultad:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li><b>Básicas</b>: +10%</li>
+                  <li><b>Moderadas</b>: +15%</li>
+                  <li><b>Intermedias</b>: +20%</li>
+                  <li><b>Avanzadas</b>: +25%</li>
+                  <li><b>Épicas</b>: +30%</li>
                 </ul>
-                <p className="mt-2 text-muted-foreground">Ejemplo: 6 de 6 Avanzadas = 100% + 25% = 125%</p>
+                <p className="mt-3 text-sm italic">Ejemplo: 6 de 6 Avanzadas = 100% + 25% = <b>125%</b></p>
               </DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Usuario Selector */}
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" role="combobox" className="w-full justify-between">
               {usuarioSeleccionado ? usuarioSeleccionado.nombre : 'Selecciona un usuario'}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0">
@@ -164,17 +165,14 @@ const SprintAudit: React.FC = () => {
             </Command>
           </PopoverContent>
         </Popover>
-      </div>
 
-      {usuarioSeleccionado && tareas.length > 0 && (
-        <div className="mb-6">
+        {/* Sprint Selector */}
+        {usuarioSeleccionado && tareas.length > 0 && (
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
-                {sprintSeleccionado !== null
-                  ? `Sprint ${sprintSeleccionado}`
-                  : 'Selecciona un sprint'}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                {sprintSeleccionado !== null ? `Sprint ${sprintSeleccionado}` : 'Selecciona un sprint'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0">
@@ -185,16 +183,9 @@ const SprintAudit: React.FC = () => {
                     <CommandItem
                       key={t.sprint}
                       value={`Sprint ${t.sprint}`}
-                      onSelect={() => {
-                        setSprintSeleccionado(t.sprint);
-                      }}
+                      onSelect={() => setSprintSeleccionado(t.sprint)}
                     >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          sprintSeleccionado === t.sprint ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
+                      <Check className={cn('mr-2 h-4 w-4', sprintSeleccionado === t.sprint ? 'opacity-100' : 'opacity-0')} />
                       Sprint {t.sprint}
                     </CommandItem>
                   ))}
@@ -202,22 +193,28 @@ const SprintAudit: React.FC = () => {
               </Command>
             </PopoverContent>
           </Popover>
-        </div>
-      )}
-      
-      <Separator className="mb-4" />
+        )}
+      </div>
+
+      <Separator className="mb-6" />
 
       {usuarioSeleccionado && (
         <div className="grid md:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Global del Usuario</CardTitle>
+              <CardTitle className="text-lg font-semibold text-primary">📊 Global del Usuario</CardTitle>
               <p className="text-muted-foreground">Recomendado: {tipoRecomendadoGlobal}</p>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-1">
+              <ul className="space-y-1 text-sm text-muted-foreground">
                 {chartGlobal.map((d, i) => (
-                  <li key={i}>{d.tipo}: {d.porcentaje}% (Ponderado: {d.ponderado}%) — {d.completadas}/{d.asignadas}</li>
+                  <li key={i} className="flex justify-between">
+                    <span>{d.tipo}</span>
+                    <span className="font-medium">
+                      {d.porcentaje}% (🎯 {d.ponderado}%)
+                      <span className="ml-2 text-xs text-gray-500">| {d.completadas}/{d.asignadas}</span>
+                    </span>
+                  </li>
                 ))}
               </ul>
             </CardContent>
@@ -226,13 +223,19 @@ const SprintAudit: React.FC = () => {
           {tareasDelSprint && (
             <Card>
               <CardHeader>
-                <CardTitle>Sprint {tareasDelSprint.sprint} (Auditoría específica)</CardTitle>
+                <CardTitle className="text-lg font-semibold text-green-700">📌 Sprint {tareasDelSprint.sprint}</CardTitle>
                 <p className="text-muted-foreground">Recomendado: {tipoRecomendadoSprint}</p>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-1">
+                <ul className="space-y-1 text-sm text-muted-foreground mb-4">
                   {chartSprint.map((d, i) => (
-                    <li key={i}>{d.tipo}: {d.porcentaje}% (Ponderado: {d.ponderado}%) — {d.completadas}/{d.asignadas}</li>
+                    <li key={i} className="flex justify-between">
+                      <span>{d.tipo}</span>
+                      <span className="font-medium">
+                        {d.porcentaje}% (🎯 {d.ponderado}%)
+                        <span className="ml-2 text-xs text-gray-500">| {d.completadas}/{d.asignadas}</span>
+                      </span>
+                    </li>
                   ))}
                 </ul>
 
@@ -252,9 +255,9 @@ const SprintAudit: React.FC = () => {
       )}
 
       {usuarioSeleccionado && tareas.length > 1 && (
-        <Card className="mt-6">
+        <Card className="mt-8">
           <CardHeader>
-            <CardTitle>📈 Evolución del rendimiento por Sprint</CardTitle>
+            <CardTitle className="text-lg font-semibold">📈 Evolución del rendimiento por Sprint</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
