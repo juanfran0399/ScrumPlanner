@@ -15,6 +15,7 @@ import Planning from './pages/Planning'
 import Teams from './pages/Teams'
 import Retrospective from './pages/Retrospective'
 import Projection from './pages/Projection'
+import ResetPassword from './pages/ResetPassword'
 
 // Function to clear cookies
 const clearCookies = () => {
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
       {
         path: 'retrospective',
         element: <Retrospective />
+      },
+      {
+        path: 'reserpassword',
+        element: <ResetPassword />
       },
       {
         path: 'projection',

@@ -6,7 +6,6 @@ import teamRoutes from './routes/team.js'
 import sprintRoutes from './routes/sprint.js'
 import plannerRoutes from './routes/planner.js'
 import miembrosRoutes from './routes/miembros.js'
-import analysis from './routes/analysis.js'
 import pool from './database.js'
 import KNN from 'ml-knn'
 
@@ -23,13 +22,16 @@ app.use('/api/team', teamRoutes)
 app.use('/api/sprint', sprintRoutes)
 app.use('/api/planner', plannerRoutes)
 app.use('/api/miembros', miembrosRoutes)
-app.use('/api/analysis', analysis)
+// Generate a larger set of training data (100 samples)
+const roles = ['Scrum Owner', 'Scrum Master', 'Developer']
+const trainingData = []
 
-const trainingData = [
-  { responses: [4, 3, 4, 4, 3, 4, 2, 4, 4, 3, 4, 4, 4], role: 'Scrum Owner' },
-  { responses: [3, 2, 3, 3, 2, 3, 3, 3, 3, 2, 3, 3, 3], role: 'Scrum Master' },
-  { responses: [2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2], role: 'Developer' }
-]
+for (let i = 0; i < 100; i++) {
+  const role = roles[i % roles.length]
+  const responses = Array.from({ length: 13 }, () => Math.floor(Math.random() * 4) + 1) // Random responses between 1 and 4
+
+  trainingData.push({ responses, role })
+}
 
 const trainingFeatures = trainingData.map(data => data.responses)
 const trainingLabels = trainingData.map(data => data.role)
