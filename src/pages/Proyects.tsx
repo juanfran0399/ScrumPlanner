@@ -28,13 +28,19 @@ const TaskManagerPlanner = () => {
     const fetchTasks = async () => {
       const teamId = localStorage.getItem('team_id')
       if (!teamId) return
-
+    
       try {
         const response = await fetch(`http://localhost:5000/api/planner/tasks/${teamId}`)
         const data = await response.json()
-        setTasks(data.tasks)
+        
+        if (data.tasks && data.tasks.length > 0) {
+          setTasks(data.tasks)
+        } else {
+          setTasks([]) // Ensure an empty array is set when no tasks are found
+        }
       } catch (error) {
         console.error('Error fetching tasks:', error)
+        setTasks([]) // Handle errors by setting an empty array
       }
     }
 

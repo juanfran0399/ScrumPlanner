@@ -87,6 +87,8 @@ const Teams = () => {
         pass: joinTeamPassword
       })
       if (response.data.success) {
+        window.location.reload()
+        window.location.reload()
         alert('Successfully joined the team!')
         localStorage.setItem('team_id', selectedTeam)
         setJoinTeamPassword('')

@@ -96,13 +96,32 @@ router.post('/join', async (req, res) => {
     if (team.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid team ID or password.' })
     }
+
     // If the team exists, insert the user into the Miembros table
     await pool.query(
       'INSERT INTO Miembros (team_id, user_id, active) VALUES (?, ?, 1)',
       [team_id, user_id]
     )
 
-    return res.json({ success: true, message: 'Successfully joined the team!' })
+    // Fetch all the members' points for the team
+    const [teamMembers] = await pool.query(
+      'SELECT user_id, points FROM Encuesta WHERE team_id = ?',
+      [team_id]
+    )
+
+    // Sort the members by points in descending order
+    teamMembers.sort((a, b) => b.points - a.points)
+
+    // Assign roles based on points
+    for (let i = 0; i < teamMembers.length; i++) {
+      const role = i === 0 ? 'Scrum Owner' : i === 1 ? 'Project Owner' : 'Developer'
+      await pool.query(
+        'UPDATE Miembros SET role = ? WHERE user_id = ? AND team_id = ?',
+        [role, teamMembers[i].user_id, team_id]
+      )
+    }
+
+    return res.json({ success: true, message: 'Successfully joined the team and roles assigned!' })
   } catch (error) {
     console.error('Error joining team:', error)
     return res.status(500).json({ success: false, message: 'An error occurred while joining the team.' })

@@ -30,7 +30,7 @@ app.use('/api/users', usersRoutes)
 const roles = ['Scrum Owner', 'Scrum Master', 'Developer']
 const trainingData = []
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 250; i++) {
   const role = roles[i % roles.length]
   const responses = Array.from({ length: 13 }, () => Math.floor(Math.random() * 4) + 1) // Random responses between 1 and 4
 
@@ -45,7 +45,7 @@ console.log('Training Features:', trainingFeatures)
 console.log('Training Labels:', trainingLabels)
 
 // Initialize and train KNN classifier
-const knn = new KNN(trainingFeatures, trainingLabels)
+const knn = new KNN(trainingFeatures, trainingLabels, { k: 2 })
 
 // API Endpoint: Save Survey Responses & Predict Role
 app.post('/api/survey/save', async (req, res) => {

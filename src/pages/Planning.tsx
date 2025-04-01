@@ -150,6 +150,7 @@ const SprintPlanning: React.FC = () => {
       setNewSprintTitle('')
       setNewSprintStartDate('')
       setNewSprintEndDate('')
+      window.location.reload()
     } catch (error) {
       console.error('Error adding sprint:', error)
     }
