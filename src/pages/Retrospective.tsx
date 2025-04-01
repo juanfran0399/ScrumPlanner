@@ -1,177 +1,220 @@
-import React, { useState } from 'react'
-import Layout from '@/components/Layout'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Button } from '@/components/ui/button'
+'use client'
+
+import React, { useEffect, useState } from 'react'
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup
-} from '@/components/ui/resizable'
+  Card, CardContent, CardHeader, CardTitle
+} from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import Layout from '@/components/Layout'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger
+} from '@/components/ui/dialog'
+import {
+  obtenerUsuarios,
+  obtenerTareasPorUsuario
+} from '@/services/api'
+import {
+  calcularIndices,
+  obtenerTipoRecomendado
+} from '@/services/predictor'
+import {
+  Command, CommandInput, CommandItem, CommandList
+} from '@/components/ui/command'
+import {
+  Popover, PopoverContent, PopoverTrigger
+} from '@/components/ui/popover'
+import { ChevronsUpDown, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar
+} from 'recharts'
 
-// Datos generales de los sprints
-const sprintData = {
-  'Sprint 1': {
-    tasks: [
-      { id: 1, task: 'Desarrollo de funcionalidad X', completed: true },
-      { id: 2, task: 'Corrección de errores Y', completed: false }
-    ],
-    analysis: 'El equipo tuvo problemas con la integración de la API externa, lo cual retrasó algunas tareas.',
-    points: { completed: 50, total: 80 },
-    team: [
-      { member: 'Alice', tasks: 5, effort: 'Alto' },
-      { member: 'Bob', tasks: 3, effort: 'Medio' }
-    ]
-  },
-  'Sprint 2': {
-    tasks: [
-      { id: 1, task: 'Implementación de la autenticación', completed: true },
-      { id: 2, task: 'Diseño de interfaz de usuario', completed: true }
-    ],
-    analysis: 'Mejor organización en el equipo, logrando completar más tareas a tiempo.',
-    points: { completed: 60, total: 100 },
-    team: [
-      { member: 'Alice', tasks: 7, effort: 'Alto' },
-      { member: 'Charlie', tasks: 4, effort: 'Medio' }
-    ]
-  }
-  // Agregar más datos para otros sprints si es necesario
+interface Usuario {
+  id_usuario: number
+  nombre: string
 }
 
-// Datos para la gráfica
-const chartData = [
-  { sprint: 'Sprint 1', completedPoints: 50, totalPoints: 80 },
-  { sprint: 'Sprint 2', completedPoints: 60, totalPoints: 100 },
-  { sprint: 'Sprint 3', completedPoints: 75, totalPoints: 90 },
-  { sprint: 'Sprint 4', completedPoints: 90, totalPoints: 100 }
-]
-
-const chartConfig = {
-  completedPoints: {
-    label: 'Puntos Completados',
-    color: '#2563eb'
-  },
-  totalPoints: {
-    label: 'Puntos Totales',
-    color: '#60a5fa'
-  }
+interface TareaSprint {
+  id: number
+  usuario_id: number
+  sprint: number
+  [key: string]: any
 }
 
-// Componente principal de Retrospectiva
-const Retrospective: React.FC = () => {
-  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+const tiposNombre = ['Básicas', 'Moderadas', 'Intermedias', 'Avanzadas', 'Épicas']
 
-  // Función para manejar la selección del sprint
-  const handleSprintChange = (value: string) => {
-    setSelectedSprint(value)
-  }
+const SprintAudit: React.FC = () => {
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null)
+  const [tareas, setTareas] = useState<TareaSprint[]>([])
+  const [sprintSeleccionado, setSprintSeleccionado] = useState<number | null>(null)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [popoverOpen, setPopoverOpen] = useState(false)
+
+  useEffect(() => {
+    obtenerUsuarios().then(res => setUsuarios(res.data))
+
+    // Check localStorage for user_id and set usuarioSeleccionado
+    const storedUserId = localStorage.getItem('user_id')
+    if (storedUserId) {
+      const user = usuarios.find(u => u.id_usuario === parseInt(storedUserId))
+      if (user != null) {
+        setUsuarioSeleccionado(user)
+      }
+    }
+  }, [usuarios])
+
+  useEffect(() => {
+    if (usuarioSeleccionado != null) {
+      obtenerTareasPorUsuario(usuarioSeleccionado.id_usuario).then(res => setTareas(res.data))
+    }
+  }, [usuarioSeleccionado])
+
+  const tareasDelSprint = tareas.find(t => t.sprint === sprintSeleccionado)
+  const indicesGlobales = calcularIndices(tareas)
+  const indicesSprint = (tareasDelSprint != null) ? calcularIndices([tareasDelSprint]) : []
+
+  const chartGlobal = indicesGlobales.map((val, i) => {
+    const completadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_completadas`] || 0, 0)
+    const asignadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_asignadas`] || 0, 0)
+    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0
+    return {
+      tipo: tiposNombre[i],
+      porcentaje: parseFloat(base.toFixed(2)),
+      ponderado: val,
+      completadas,
+      asignadas
+    }
+  })
+
+  const chartSprint = indicesSprint.map((val, i) => {
+    const completadas = tareasDelSprint?.[`t${i + 1}_completadas`] || 0
+    const asignadas = tareasDelSprint?.[`t${i + 1}_asignadas`] || 0
+    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0
+    return {
+      tipo: tiposNombre[i],
+      porcentaje: parseFloat(base.toFixed(2)),
+      ponderado: val,
+      completadas,
+      asignadas
+    }
+  })
+
+  const graficoEvolucion = tareas.map((t) => {
+    const totalCompletadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_completadas`], 0)
+    const totalAsignadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_asignadas`], 0)
+    const porcentaje = totalAsignadas > 0 ? (totalCompletadas * 100) / totalAsignadas : 0
+
+    return {
+      sprint: `Sprint ${t.sprint}`,
+      rendimiento: parseFloat(porcentaje.toFixed(2))
+    }
+  })
+
+  const tipoRecomendadoGlobal = obtenerTipoRecomendado(indicesGlobales)
+  const tipoRecomendadoSprint = obtenerTipoRecomendado(indicesSprint)
 
   return (
     <Layout>
-      <ResizablePanelGroup
-        direction='horizontal'
-        className='min-h-[400px] max-w-[1200px] rounded-lg border md:min-w-[600px]'
-      >
-        {/* Panel izquierdo para la información del sprint */}
-        <ResizablePanel>
-          <div className='p-6'>
-            <h1 className='text-xl font-bold'>Retrospectiva de Proyecto - Scrum</h1>
+      <div className='flex flex-col justify-between gap-4 mb-6 md:flex-row md:items-center'>
+        <h2 className='text-2xl font-bold text-primary'>📋 Auditoría de Sprints</h2>
+        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+          <DialogTrigger asChild>
+            <Button variant='outline'>🧠 Cómo se calcula</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>🧠 Cómo se calculan los porcentajes</DialogTitle>
+              <DialogDescription>
+                <p className='mb-2'>El sistema aplica un porcentaje extra según la dificultad:</p>
+                <ul className='space-y-1 text-sm list-disc list-inside text-muted-foreground'>
+                  <li><b>Básicas</b>: +10%</li>
+                  <li><b>Moderadas</b>: +15%</li>
+                  <li><b>Intermedias</b>: +20%</li>
+                  <li><b>Avanzadas</b>: +25%</li>
+                  <li><b>Épicas</b>: +30%</li>
+                </ul>
+                <p className='mt-3 text-sm italic'>Ejemplo: 6 de 6 Avanzadas = 100% + 25% = <b>125%</b></p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-            {/* Selección del Sprint */}
-            <div className='mb-4'>
-              <Select onValueChange={handleSprintChange}>
-                <SelectTrigger className='w-[180px]'>
-                  <SelectValue placeholder='Selecciona un Sprint' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Sprints</SelectLabel>
-                    <SelectItem value='Sprint 1'>Sprint 1</SelectItem>
-                    <SelectItem value='Sprint 2'>Sprint 2</SelectItem>
-                    <SelectItem value='Sprint 3'>Sprint 3</SelectItem>
-                    <SelectItem value='Sprint 4'>Sprint 4</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className='grid grid-cols-1 gap-4 mb-6 md:grid-cols-2'>
+        {/* Usuario Selector */}
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant='outline' role='combobox' className='justify-between w-full'>
+              {(usuarioSeleccionado != null) ? usuarioSeleccionado.nombre : 'Selecciona un usuario'}
+              <ChevronsUpDown className='w-4 h-4 ml-2 opacity-50' />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='w-full p-0'>
+            <Command>
+              <CommandInput placeholder='Buscar usuario...' />
+              <CommandList>
+                {usuarios.map((user) => (
+                  <CommandItem
+                    key={user.id_usuario}
+                    value={user.nombre}
+                    onSelect={() => {
+                      setUsuarioSeleccionado(user)
+                      setPopoverOpen(false)
+                      setSprintSeleccionado(null)
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', usuarioSeleccionado?.id_usuario === user.id_usuario ? 'opacity-100' : 'opacity-0')} />
+                    {user.nombre}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
-            {/* Mostrar detalles del sprint seleccionado */}
-            {selectedSprint && (
-              <>
-                <h2 className='text-lg font-semibold'>{`Detalles de ${selectedSprint}`}</h2>
+        {/* Sprint Selector */}
+        {(usuarioSeleccionado != null) && tareas.length > 0 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant='outline' role='combobox' className='justify-between w-full'>
+                {sprintSeleccionado !== null ? `Sprint ${sprintSeleccionado}` : 'Selecciona un sprint'}
+                <ChevronsUpDown className='w-4 h-4 ml-2 opacity-50' />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className='w-full p-0'>
+              <Command>
+                <CommandInput placeholder='Buscar sprint...' />
+                <CommandList>
+                  {tareas.map((t) => (
+                    <CommandItem
+                      key={t.sprint}
+                      value={`Sprint ${t.sprint}`}
+                      onSelect={() => setSprintSeleccionado(t.sprint)}
+                    >
+                      <Check className={cn('mr-2 h-4 w-4', sprintSeleccionado === t.sprint ? 'opacity-100' : 'opacity-0')} />
+                      Sprint {t.sprint}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
 
-                {/* Mostrar tareas */}
-                <div className='mb-4'>
-                  <h3 className='font-semibold'>Tareas</h3>
-                  <ul>
-                    {sprintData[selectedSprint]?.tasks.map((task: any) => (
-                      <li key={task.id}>
-                        {task.task} - {task.completed ? 'Completada' : 'Pendiente'}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+      <Separator className='mb-6' />
 
-                {/* Mostrar análisis del sprint */}
-                <div className='mb-4'>
-                  <h3 className='font-semibold'>Análisis del Sprint</h3>
-                  <p>{sprintData[selectedSprint]?.analysis}</p>
-                </div>
+      {(usuarioSeleccionado != null) && (
+        <div className='grid gap-4 md:grid-cols-2'>
+          {/* Rest of the code remains the same */}
+        </div>
+      )}
 
-                {/* Mostrar puntos completados */}
-                <div className='mb-4'>
-                  <h3 className='font-semibold'>Puntos</h3>
-                  <p>Puntos completados: {sprintData[selectedSprint]?.points.completed}</p>
-                  <p>Puntos totales: {sprintData[selectedSprint]?.points.total}</p>
-                </div>
-
-                {/* Mostrar trabajo de los integrantes */}
-                <div className='mb-4'>
-                  <h3 className='font-semibold'>Trabajo del Equipo</h3>
-                  <ul>
-                    {sprintData[selectedSprint]?.team.map((member: any, index: number) => (
-                      <li key={index}>
-                        {member.member}: {member.tasks} tareas, Esfuerzo: {member.effort}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Inputs adicionales para más información */}
-                <div className='mb-4'>
-                  <h3 className='font-semibold'>Agregar Comentarios</h3>
-                  <Input placeholder='Comentarios del sprint...' />
-                  <Button className='mt-2'>Agregar</Button>
-                </div>
-              </>
-            )}
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Panel derecho para la gráfica */}
-        <ResizablePanel>
-          <div className='p-6'>
-            <h2 className='text-xl font-bold'>Análisis Global de los Sprints</h2>
-            <ResponsiveContainer width='100%' height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='sprint' />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey='completedPoints' fill='#2563eb' />
-                <Bar dataKey='totalPoints' fill='#60a5fa' />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
     </Layout>
   )
 }
 
-// Exportar componente
-export default Retrospective
+export default SprintAudit

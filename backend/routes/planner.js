@@ -4,12 +4,27 @@ import pool from '../database.js'
 const router = express.Router()
 
 // Route to fetch all tasks (with optional pagination)
-router.get('/tasks', async (req, res) => {
-  const limit = parseInt(req.query.limit) || 10
-  const offset = parseInt(req.query.offset) || 0
+router.get('/tasks/:teamId', async (req, res) => {
+  console.log('Received params:', req.params) // Debugging log
+
+  const teamId = parseInt(req.params.teamId, 10)
+  const limit = parseInt(req.query.limit, 10) || 100
+  const offset = parseInt(req.query.offset, 10) || 0
+
+  if (isNaN(teamId)) {
+    return res.status(400).json({ error: 'Invalid or missing team_id parameter' })
+  }
 
   try {
-    const [rows] = await pool.query('SELECT * FROM tasks LIMIT ? OFFSET ?', [limit, offset])
+    const [rows] = await pool.query(
+      'SELECT * FROM tasks WHERE proyecto = ? LIMIT ? OFFSET ?',
+      [teamId, limit, offset]
+    )
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'No tasks found' })
+    }
+
     res.status(200).json({ tasks: rows })
   } catch (error) {
     console.error('Error fetching tasks:', error)
@@ -19,24 +34,20 @@ router.get('/tasks', async (req, res) => {
 
 // Route to add a new task
 router.post('/tasks', async (req, res) => {
-  const { title, description, status, assignedTo, complexity, sprint } = req.body
-
-  if (!title || !description || !status || !complexity) {
-    return res.status(400).json({ error: 'Missing required fields' })
-  }
-
   try {
-    const [result] = await pool.query(
-      'INSERT INTO tasks (title, description, status, assignedTo, complexity, sprint_id, compleated) VALUES (?, ?, ?, ?, ?, ?, 0)',
-      [title, description, status, assignedTo || null, complexity, sprint]
-    )
+    const { title, description, status, assignedTo, complexity, sprint, proyecto } = req.body
 
-    res.status(201).json({ message: 'Task added successfully', taskId: result.insertId })
+    if (!title || !description || !proyecto) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    const query = 'INSERT INTO tasks (title, description, status, assignedTo, complexity, sprint_id, compleated, proyecto) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    const values = [title, description, status, assignedTo, complexity, sprint, 0, proyecto]
+
+    const [result] = await pool.execute(query, values)
+    res.status(201).json({ taskId: result.insertId })
   } catch (error) {
     console.error('Error adding task:', error)
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ error: 'Task title must be unique' })
-    }
     res.status(500).json({ error: 'An error occurred while adding the task.' })
   }
 })

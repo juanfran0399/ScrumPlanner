@@ -1,37 +1,66 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
+import axios from 'axios'
 
 const ScrumPoker = () => {
-  const [selectedProject, setSelectedProject] = useState<string | null>(null)
-  const [selectedTask, setSelectedTask] = useState<string | null>(null)
-  const [selectedCard, setSelectedCard] = useState<string | null>(null)
+  const [sprints, setSprints] = useState([])
+  const [tasks, setTasks] = useState([])
+  const [selectedSprint, setSelectedSprint] = useState('')
+  const [selectedTask, setSelectedTask] = useState('')
+  const [selectedVote, setSelectedVote] = useState('')
 
-  const projects = {
-    'Sistema de Gestión de Inventario': ['Tarea 1', 'Tarea 2', 'Tarea 3'],
-    'Aplicación de Tareas': ['Tarea 4', 'Tarea 5'],
-    'Plataforma de Aprendizaje en Línea': ['Tarea 6', 'Tarea 7', 'Tarea 8'],
-    'Sitio Web de Comercio Electrónico': ['Tarea 9', 'Tarea 10'],
-    'Sistema de Reservas de Hotel': ['Tarea 11', 'Tarea 12']
+  useEffect(() => {
+    const fetchSprints = async () => {
+      const teamId = localStorage.getItem('team_id')
+      if (!teamId) {
+        console.error('No team_id found in localStorage')
+        return
+      }
+      try {
+        const response = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+        setSprints(Array.isArray(response.data.sprints) ? response.data.sprints : [])
+      } catch (error) {
+        console.error('Error fetching sprints:', error)
+        setSprints([])
+      }
+    }
+    fetchSprints()
+  }, [])
+
+  const fetchTasks = async (sprintId) => {
+    try {
+      const response = await axios.get(`/api/tasks?sprintId=${sprintId}&complexity=Votacion`)
+      setTasks(Array.isArray(response.data) ? response.data : [])
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+      setTasks([])
+    }
   }
 
-  const cards = ['1', '2', '3', '4', '5']
-
-  const handleProjectSelect = (project: string) => {
-    setSelectedProject(project)
-    setSelectedTask(null) // Reiniciar la tarea cuando se selecciona un nuevo proyecto
-    setSelectedCard(null) // Reiniciar la carta cuando se selecciona un nuevo proyecto
+  const handleSprintChange = (event) => {
+    const sprintId = event.target.value
+    setSelectedSprint(sprintId)
+    setSelectedTask('')
+    setSelectedVote('')
+    if (sprintId) fetchTasks(sprintId)
   }
 
-  const handleTaskSelect = (task: string) => {
-    setSelectedTask(task)
-    setSelectedCard(null) // Reiniciar la carta cuando se selecciona una nueva tarea
-  }
+  const handleVoteSubmit = async () => {
+    if (!selectedTask || !selectedVote) {
+      alert('Por favor selecciona una tarea y un voto.')
+      return
+    }
 
-  const handleCardSelect = (card: string) => {
-    setSelectedCard(card)
+    try {
+      await axios.post('/api/vote', { taskId: selectedTask, vote: selectedVote })
+      alert('Voto registrado exitosamente')
+    } catch (error) {
+      console.error('Error submitting vote:', error)
+      alert('Hubo un error al registrar el voto')
+    }
   }
 
   return (
@@ -39,73 +68,49 @@ const ScrumPoker = () => {
       <div className='container mx-auto mt-8'>
         <Card>
           <CardHeader>
-            <CardTitle>
-              {selectedProject ? `Scrum Poker - ${selectedProject}` : 'Scrum Poker'}
-            </CardTitle>
+            <CardTitle>Scrum Poker</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Selecciona un proyecto, una tarea y una carta para priorizar tareas:</p>
+            <p>Selecciona un Sprint y una tarea para votar:</p>
 
-            {/* Selección de Proyecto */}
-            <div className='flex flex-wrap gap-4'>
-              {Object.keys(projects).map((project) => (
-                <Button
-                  key={project}
-                  className={`m-2 ${selectedProject === project ? 'bg-[#9A3324] text-white' : ''}`}
-                  onClick={() => handleProjectSelect(project)}
-                >
-                  {project}
-                </Button>
-              ))}
+            {/* Sprint Selection */}
+            <div className='my-4'>
+              <label className='block text-sm font-medium'>Selecciona un Sprint:</label>
+              <select value={selectedSprint} onChange={handleSprintChange} className='w-full p-2 border rounded'>
+                <option value=''>-- Seleccionar Sprint --</option>
+                {sprints.map((sprint) => (
+                  <option key={sprint.id} value={sprint.id}>{sprint.name} - {sprint.title}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Selección de Tarea */}
-            {selectedProject && (
-              <>
-                <Separator className='my-4' />
-                <div>
-                  <h2>Backlog para el Proyecto: {selectedProject}</h2>
-                  <div className='flex flex-wrap gap-4'>
-                    {projects[selectedProject].map((task) => (
-                      <Button
-                        key={task}
-                        className={`m-2 ${selectedTask === task ? 'bg-[#9A3324] text-white' : ''}`}
-                        onClick={() => handleTaskSelect(task)}
-                      >
-                        {task}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </>
+            {/* Task Selection */}
+            {selectedSprint && tasks.length > 0 && (
+              <div className='my-4'>
+                <label className='block text-sm font-medium'>Selecciona una Tarea:</label>
+                <select value={selectedTask} onChange={(e) => setSelectedTask(e.target.value)} className='w-full p-2 border rounded'>
+                  <option value=''>-- Seleccionar Tarea --</option>
+                  {tasks.map((task) => (
+                    <option key={task.id} value={task.id}>{task.name}</option>
+                  ))}
+                </select>
+              </div>
             )}
 
-            {/* Selección de Carta */}
+            {/* Voting Section */}
             {selectedTask && (
               <>
                 <Separator className='my-4' />
-                <div>
-                  <h3>Selecciona una carta para la tarea: {selectedTask}</h3>
-                  <div className='flex flex-wrap gap-4'>
-                    {cards.map((card) => (
-                      <Button
-                        key={card}
-                        className={`m-2 ${selectedCard === card ? 'bg-[#9A3324] text-white' : ''}`}
-                        onClick={() => handleCardSelect(card)}
-                      >
-                        {card}
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Mostrar Carta Seleccionada */}
-                  {selectedCard && (
-                    <div className='mt-8 text-center'>
-                      <h4 className='text-2xl'>Has seleccionado:</h4>
-                      <div className='mt-4 text-6xl font-bold text-[#9A3324]'>{selectedCard}</div>
-                    </div>
-                  )}
-                </div>
+                <label className='block text-sm font-medium'>Selecciona tu voto:</label>
+                <select value={selectedVote} onChange={(e) => setSelectedVote(e.target.value)} className='w-full p-2 border rounded'>
+                  <option value=''>-- Seleccionar Voto --</option>
+                  {[1, 2, 3, 4, 5].map((vote) => (
+                    <option key={vote} value={vote}>{vote}</option>
+                  ))}
+                </select>
+                <Button onClick={handleVoteSubmit} className='mt-4 w-full bg-[#9A3324] text-white'>
+                  Enviar Voto
+                </Button>
               </>
             )}
           </CardContent>

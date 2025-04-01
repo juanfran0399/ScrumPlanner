@@ -27,7 +27,6 @@ const Teams = () => {
     if (storedTeamId) setSelectedTeam(storedTeamId) // Automatically select the team
   }, [])
 
-
   useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -61,15 +60,16 @@ const Teams = () => {
         description: newTeamDescription,
         pass: newTeamPassword
       })
+
+      console.log('Response:', response.data) // Debugging
+
       if (response.data.success) {
-        alert('Team added successfully!')
-        setNewTeamName('')
-        setNewTeamDescription('')
-        setNewTeamPassword('')
-        setShowCreateTeam(false)
-        window.location.reload()
+        window.location.href = window.location.href // Force refresh
+      } else {
+        alert(response.data.message || 'Failed to create team.')
       }
     } catch (error) {
+      console.error('Error creating team:', error)
       alert('An error occurred while adding the team.')
     } finally {
       setCreatingTeam(false)

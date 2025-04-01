@@ -26,8 +26,11 @@ const TaskManagerPlanner = () => {
 
   useEffect(() => {
     const fetchTasks = async () => {
+      const teamId = localStorage.getItem('team_id')
+      if (!teamId) return
+
       try {
-        const response = await fetch(`${API_BASE_URL}/tasks`)
+        const response = await fetch(`http://localhost:5000/api/planner/tasks/${teamId}`)
         const data = await response.json()
         setTasks(data.tasks)
       } catch (error) {
@@ -72,6 +75,7 @@ const TaskManagerPlanner = () => {
   }, [])
 
   const addTask = async () => {
+    const teamId = localStorage.getItem('team_id')
     if (newTask.title && newTask.description) {
       const newTaskData = {
         title: newTask.title,
@@ -79,7 +83,8 @@ const TaskManagerPlanner = () => {
         status: 'Backlog',
         assignedTo: newTask.assignedTo,
         complexity: newTask.complexity,
-        sprint: selectedSprint
+        sprint: selectedSprint,
+        proyecto: parseInt(teamId)
       }
 
       try {

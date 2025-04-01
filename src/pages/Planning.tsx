@@ -95,6 +95,23 @@ const SprintPlanning: React.FC = () => {
 
   const currentSprint = sprints[selectedSprintIndex] || null
 
+  const handleCarga = async () => {
+    if (!userId || !currentSprint.sprint_id) {
+      console.error('User ID or Sprint ID is missing.')
+      return
+    }
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/modelo/carga', {
+        user_id: userId,
+        sprint_id: currentSprint.sprint_id
+      })
+      console.log(response.data.message)
+    } catch (error) {
+      console.error('Error sending carga request:', error)
+    }
+  }
+
   useEffect(() => {
     if (currentSprint) {
       setObjectives(currentSprint.objectives)
@@ -109,16 +126,27 @@ const SprintPlanning: React.FC = () => {
 
   const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (!teamId) {
+      console.error('No team ID found.')
+      return
+    }
+
     try {
-      const { data } = await axios.post('http://localhost:5000/api/sprint/add-sprint', {
+      // Fetch existing sprints for the team
+      const { data } = await axios.get(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+      const sprintCount = data.sprints.length
+      const nextSprintTitle = `Sprint ${sprintCount + 1}`
+
+      const response = await axios.post('http://localhost:5000/api/sprint/add-sprint', {
         user_id: userId,
         team_id: teamId,
-        title: newSprintTitle,
+        title: nextSprintTitle,
         start_date: newSprintStartDate,
         end_date: newSprintEndDate
       })
 
-      setSprints([...sprints, data])
+      setSprints([...sprints, response.data])
       setNewSprintTitle('')
       setNewSprintStartDate('')
       setNewSprintEndDate('')
@@ -150,28 +178,9 @@ const SprintPlanning: React.FC = () => {
         )
       )
       console.log('Sprint objectives updated successfully')
+      window.location.reload()
     } catch (error) {
       console.error('Error updating objectives:', error)
-    }
-  }
-
-  const getChartData = () => {
-    if (!currentSprint?.tasks) return { labels: [], datasets: [] }
-
-    const labels = ['Pendiente', 'En Progreso', 'Completada']
-    const taskCounts = labels.map(
-      (status) => currentSprint.tasks.filter((task) => task.status === status).length
-    )
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Cantidad de Tareas',
-          data: taskCounts,
-          backgroundColor: ['#FF6384', '#36A2EB', '#4BC0C0']
-        }
-      ]
     }
   }
 
@@ -216,13 +225,7 @@ const SprintPlanning: React.FC = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddSprint}>
-                <Label htmlFor='newSprintTitle'>Título:</Label>
-                <Input
-                  id='newSprintTitle'
-                  value={newSprintTitle}
-                  onChange={(e) => setNewSprintTitle(e.target.value)}
-                  required
-                />
+                <p><strong>Próximo Sprint:</strong> Sprint {sprints.length + 1}</p>
                 <Label htmlFor='newSprintStartDate'>Fecha de Inicio:</Label>
                 <Input
                   type='date'
@@ -230,6 +233,7 @@ const SprintPlanning: React.FC = () => {
                   value={newSprintStartDate}
                   onChange={(e) => setNewSprintStartDate(e.target.value)}
                   required
+                  className='text-black bg-gray-300'
                 />
                 <Label htmlFor='newSprintEndDate'>Fecha de Fin:</Label>
                 <Input
@@ -238,6 +242,7 @@ const SprintPlanning: React.FC = () => {
                   value={newSprintEndDate}
                   onChange={(e) => setNewSprintEndDate(e.target.value)}
                   required
+                  className='text-black bg-gray-300'
                 />
                 <Button type='submit' className='mt-4'>
                   Agregar Sprint
@@ -255,8 +260,8 @@ const SprintPlanning: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p><strong>Título:</strong> {currentSprint.title}</p>
-                <p><strong>Fecha de Inicio:</strong> {currentSprint.start_date}</p>
-                <p><strong>Fecha de Fin:</strong> {currentSprint.end_date}</p>
+                <p><strong>Fecha de Inicio:</strong> {new Date(currentSprint.start_date).toISOString().split('T')[0]}</p>
+                <p><strong>Fecha de Fin:</strong> {new Date(currentSprint.end_date).toISOString().split('T')[0]}</p>
                 <p><strong>Objetivos:</strong> {currentSprint.Objectives}</p>
                 <form onSubmit={handleSaveObjectives}>
                   <Textarea
@@ -272,9 +277,9 @@ const SprintPlanning: React.FC = () => {
           </div>
         )}
 
-        {currentSprint?.tasks && (
+        {currentSprint && (
           <div className='mt-6'>
-            <Bar data={getChartData()} options={{ responsive: true }} />
+            <Button onClick={handleCarga}>Enviar Carga</Button>
           </div>
         )}
       </div>
