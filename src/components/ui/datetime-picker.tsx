@@ -217,7 +217,7 @@ function genMonths (locale: Locale) {
   }))
 }
 
-function genYears (locale: Locale, yearRange = 50) {
+function genYears (yearRange = 50) {
   const today = new Date()
   return Array.from({ length: yearRange * 2 + 1 }, (_, i) => ({
     value: today.getFullYear() - yearRange + i,
@@ -234,8 +234,8 @@ function Calendar ({
   yearRange = 50,
   ...props
 }: CalendarProps & { yearRange?: number }) {
-  const MONTHS = React.useMemo(() => genMonths((props.locale != null) || enUS), [])
-  const YEARS = React.useMemo(() => genYears((props.locale != null) || enUS, yearRange), [])
+  const MONTHS = React.useMemo(() => genMonths(props.locale ?? enUS), []) // Fixed type error by using nullish coalescing operator
+  const YEARS = React.useMemo(() => genYears(yearRange), [])
 
   return (
     <DayPicker
@@ -274,8 +274,8 @@ function Calendar ({
         ...classNames
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className='w-4 h-4' />,
-        IconRight: ({ ...props }) => <ChevronRight className='w-4 h-4' />,
+        IconLeft: () => <ChevronLeft className='w-4 h-4' />,
+        IconRight: () => <ChevronRight className='w-4 h-4' />,
         CaptionLabel: ({ displayMonth }) => {
           return (
             <div className='inline-flex gap-2'>

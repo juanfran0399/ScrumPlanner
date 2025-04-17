@@ -5,15 +5,21 @@ import Layout from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import axios from 'axios'
 
-const ScrumPoker = () => {
-  const [sprints, setSprints] = useState([])
-  const [tasks, setTasks] = useState([])
+interface Sprint {
+  id: string
+  name: string
+  title: string
+} // Added type definition for Sprint
+
+const ScrumPoker: React.FC = () => {
+  const [sprints, setSprints] = useState<Sprint[]>([]) // Updated type to Sprint[]
+  const [tasks, setTasks] = useState<any[]>([]) // Updated type to any[] to match usage
   const [selectedSprint, setSelectedSprint] = useState('')
   const [selectedTask, setSelectedTask] = useState('')
   const [selectedVote, setSelectedVote] = useState('')
 
   useEffect(() => {
-    const fetchSprints = async () => {
+    const fetchSprints = async (): Promise<void> => {
       const teamId = localStorage.getItem('team_id')
       if (!teamId) {
         console.error('No team_id found in localStorage')
@@ -30,7 +36,7 @@ const ScrumPoker = () => {
     fetchSprints()
   }, [])
 
-  const fetchTasks = async (sprintId) => {
+  const fetchTasks = async (sprintId: string): Promise<void> => {
     try {
       const response = await axios.get(`/api/tasks?sprintId=${sprintId}&complexity=Votacion`)
       setTasks(Array.isArray(response.data) ? response.data : [])
@@ -40,15 +46,15 @@ const ScrumPoker = () => {
     }
   }
 
-  const handleSprintChange = (event) => {
+  const handleSprintChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
     const sprintId = event.target.value
     setSelectedSprint(sprintId)
     setSelectedTask('')
     setSelectedVote('')
-    if (sprintId) fetchTasks(sprintId)
+    if (sprintId) void fetchTasks(sprintId)
   }
 
-  const handleVoteSubmit = async () => {
+  const handleVoteSubmit = async (): Promise<void> => {
     if (!selectedTask || !selectedVote) {
       alert('Por favor selecciona una tarea y un voto.')
       return

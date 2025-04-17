@@ -1,9 +1,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import {
-  Card, CardContent, CardHeader, CardTitle
-} from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import Layout from '@/components/Layout'
@@ -15,10 +12,6 @@ import {
   obtenerTareasPorUsuario
 } from '@/services/api'
 import {
-  calcularIndices,
-  obtenerTipoRecomendado
-} from '@/services/predictor'
-import {
   Command, CommandInput, CommandItem, CommandList
 } from '@/components/ui/command'
 import {
@@ -26,10 +19,6 @@ import {
 } from '@/components/ui/popover'
 import { ChevronsUpDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
-} from 'recharts'
 
 interface Usuario {
   id_usuario: number
@@ -42,8 +31,6 @@ interface TareaSprint {
   sprint: number
   [key: string]: any
 }
-
-const tiposNombre = ['Básicas', 'Moderadas', 'Intermedias', 'Avanzadas', 'Épicas']
 
 const SprintAudit: React.FC = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -71,50 +58,6 @@ const SprintAudit: React.FC = () => {
       obtenerTareasPorUsuario(usuarioSeleccionado.id_usuario).then(res => setTareas(res.data))
     }
   }, [usuarioSeleccionado])
-
-  const tareasDelSprint = tareas.find(t => t.sprint === sprintSeleccionado)
-  const indicesGlobales = calcularIndices(tareas)
-  const indicesSprint = (tareasDelSprint != null) ? calcularIndices([tareasDelSprint]) : []
-
-  const chartGlobal = indicesGlobales.map((val, i) => {
-    const completadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_completadas`] || 0, 0)
-    const asignadas = tareas.reduce((sum, t) => sum + t[`t${i + 1}_asignadas`] || 0, 0)
-    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0
-    return {
-      tipo: tiposNombre[i],
-      porcentaje: parseFloat(base.toFixed(2)),
-      ponderado: val,
-      completadas,
-      asignadas
-    }
-  })
-
-  const chartSprint = indicesSprint.map((val, i) => {
-    const completadas = tareasDelSprint?.[`t${i + 1}_completadas`] || 0
-    const asignadas = tareasDelSprint?.[`t${i + 1}_asignadas`] || 0
-    const base = asignadas > 0 ? (completadas * 100) / asignadas : 0
-    return {
-      tipo: tiposNombre[i],
-      porcentaje: parseFloat(base.toFixed(2)),
-      ponderado: val,
-      completadas,
-      asignadas
-    }
-  })
-
-  const graficoEvolucion = tareas.map((t) => {
-    const totalCompletadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_completadas`], 0)
-    const totalAsignadas = [1, 2, 3, 4, 5].reduce((sum, tipo) => sum + t[`t${tipo}_asignadas`], 0)
-    const porcentaje = totalAsignadas > 0 ? (totalCompletadas * 100) / totalAsignadas : 0
-
-    return {
-      sprint: `Sprint ${t.sprint}`,
-      rendimiento: parseFloat(porcentaje.toFixed(2))
-    }
-  })
-
-  const tipoRecomendadoGlobal = obtenerTipoRecomendado(indicesGlobales)
-  const tipoRecomendadoSprint = obtenerTipoRecomendado(indicesSprint)
 
   return (
     <Layout>

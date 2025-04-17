@@ -5,8 +5,8 @@ import { Separator } from '@/components/ui/separator'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import {
-  IconAnalyze, IconBrandTeams, IconCapProjecting,
-  IconGraph, IconLayoutDashboard, IconPokerChip,
+  IconBrandTeams, IconCapProjecting,
+  IconLayoutDashboard, IconPokerChip,
   IconUserQuestion, IconWriting
 } from '@tabler/icons-react'
 

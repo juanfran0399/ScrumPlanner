@@ -73,40 +73,6 @@ const LoginForm = (): JSX.Element => {
     }
   }
 
-  const handleRegister = async (): Promise<void> => {
-    if (password !== confirmPassword) {
-      setFormError('Passwords do not match')
-      return
-    }
-
-    if (!name || !email || !username || !password) {
-      setFormError('All fields are required')
-      return
-    }
-
-    setProcessing(true)
-
-    try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
-        name,
-        email,
-        username,
-        password
-      })
-
-      if (response.data.success) {
-        navigate('/login') // Redirect to login page after successful registration
-      } else {
-        setFormError(response.data.message)
-      }
-    } catch (error) {
-      console.error('Registration error', error)
-      setFormError('An error occurred during registration')
-    }
-
-    setProcessing(false)
-  }
-
   return (
     <div className='w-full min-h-screen lg:grid lg:grid-cols-2'>
       <div className='flex items-center justify-center py-12'>
@@ -125,7 +91,7 @@ const LoginForm = (): JSX.Element => {
                 id='username'
                 type='text'
                 value={username}
-                placeholder='Código UDG'
+                placeholder='Usuario'
                 onChange={(e) => {
                   setUsername(e.target.value)
                   setUserNameError(false)

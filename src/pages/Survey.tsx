@@ -153,7 +153,7 @@ const preguntas = [
   }
 ]
 
-const EncuestaPage = () => {
+const EncuestaPage: React.FC = () => {
   const [selectedScores, setSelectedScores] = useState<{ [key: number]: number | null }>({})
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -163,8 +163,8 @@ const EncuestaPage = () => {
   const userId = localStorage.getItem('id_usuario')
 
   useEffect(() => {
-    const checkSurveyStatus = async () => {
-      const userIdAsInt = parseInt(userId || '0', 10)
+    const checkSurveyStatus = async (): Promise<void> => {
+      const userIdAsInt = parseInt(userId ?? '0', 10)
 
       try {
         const response = await axios.post('http://localhost:5000/api/survey/check', {
@@ -185,7 +185,7 @@ const EncuestaPage = () => {
     }
   }, [userId])
 
-  const handleOptionChange = (id: number, score: number) => {
+  const handleOptionChange = (id: number, score: number): void => {
     setSelectedScores((prev) => ({
       ...prev,
       [id]: score
@@ -193,7 +193,7 @@ const EncuestaPage = () => {
     setError(null)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<void> => {
     const unanswered = preguntas.some(pregunta => selectedScores[pregunta.id] == null)
 
     if (unanswered) {
@@ -201,12 +201,12 @@ const EncuestaPage = () => {
       return
     }
 
-    const score = Object.values(selectedScores).reduce((acc, curr) => acc + (curr || 0), 0)
+    const score = Object.values(selectedScores).reduce((acc: number, curr) => acc + (curr ?? 0), 0) // Explicitly typed acc as number
     setTotalScore(score)
     setSubmitted(true)
     setError(null)
 
-    const userIdAsInt = parseInt(userId || '0', 10)
+    const userIdAsInt = parseInt(userId ?? '0', 10)
 
     // Create an array of answers with question_id and selected score
     const respuestas = preguntas.map(pregunta => ({

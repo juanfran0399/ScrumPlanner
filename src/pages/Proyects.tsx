@@ -16,73 +16,72 @@ const API_BASE_URL = 'http://localhost:5000/api/planner'
 const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión', 'Terminado']
 const complexityOptions = ['Basica', 'Moderada', 'Intermedia', 'Avanzada', 'Epica']
 
-const TaskManagerPlanner = () => {
-  const [tasks, setTasks] = useState([])
+const TaskManagerPlanner: React.FC = () => {
+  const [tasks, setTasks] = useState<any[]>([])
   const [newTask, setNewTask] = useState({ title: '', description: '', complexity: '', assignedTo: '', sprint: '' })
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
-  const [teamMembers, setTeamMembers] = useState([])
-  const [sprints, setSprints] = useState([])
-  const [selectedSprint, setSelectedSprint] = useState(null)
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [sprints, setSprints] = useState<any[]>([])
+  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+
+  const fetchTasks = async (): Promise<void> => {
+    const teamId = localStorage.getItem('team_id')
+    if (teamId === null || teamId === '') return
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/planner/tasks/${teamId}`)
+      const data = await response.json()
+
+      if (Array.isArray(data.tasks) && data.tasks.length > 0) {
+        setTasks(data.tasks)
+      } else {
+        setTasks([])
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+      setTasks([])
+    }
+  }
+
+  const fetchTeamMembers = async (): Promise<void> => {
+    const teamId = localStorage.getItem('team_id')
+    if (teamId === null || teamId === '') return
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
+      const data = await response.json()
+      const members = Array.isArray(data.members) ? data.members : []
+      setTeamMembers(members)
+      localStorage.setItem('team_members', JSON.stringify(members))
+    } catch (error) {
+      console.error('Error fetching team members:', error)
+    }
+  }
+
+  const fetchSprints = async (): Promise<void> => {
+    const teamId = localStorage.getItem('team_id')
+    if (teamId === null || teamId === '') return
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
+      const data = await response.json()
+      const sprints = Array.isArray(data.sprints) ? data.sprints : []
+      setSprints(sprints)
+      localStorage.setItem('sprints', JSON.stringify(sprints))
+    } catch (error) {
+      console.error('Error fetching sprints:', error)
+    }
+  }
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const teamId = localStorage.getItem('team_id')
-      if (!teamId) return
-    
-      try {
-        const response = await fetch(`http://localhost:5000/api/planner/tasks/${teamId}`)
-        const data = await response.json()
-        
-        if (data.tasks && data.tasks.length > 0) {
-          setTasks(data.tasks)
-        } else {
-          setTasks([]) // Ensure an empty array is set when no tasks are found
-        }
-      } catch (error) {
-        console.error('Error fetching tasks:', error)
-        setTasks([]) // Handle errors by setting an empty array
-      }
-    }
-
-    const fetchTeamMembers = async () => {
-      const teamId = localStorage.getItem('team_id')
-      if (!teamId) return
-
-      try {
-        const response = await fetch(`http://localhost:5000/api/team/members/${teamId}`)
-        const data = await response.json()
-        const members = data.members || []
-        setTeamMembers(members)
-
-        // Save team members in localStorage
-        localStorage.setItem('team_members', JSON.stringify(members))
-      } catch (error) {
-        console.error('Error fetching team members:', error)
-      }
-    }
-
-    const fetchSprints = async () => {
-      const teamId = localStorage.getItem('team_id')
-      if (!teamId) return
-
-      try {
-        const response = await fetch(`http://localhost:5000/api/sprint/all-sprints/${teamId}`)
-        const data = await response.json()
-        setSprints(data.sprints || [])
-        localStorage.setItem('sprints', JSON.stringify(data.sprints || [])) // Save to localStorage
-      } catch (error) {
-        console.error('Error fetching sprints:', error)
-      }
-    }
-
-    fetchTasks()
-    fetchTeamMembers()
-    fetchSprints()
+    void fetchTasks()
+    void fetchTeamMembers()
+    void fetchSprints()
   }, [])
 
-  const addTask = async () => {
+  const addTask = async (): Promise<void> => {
     const teamId = localStorage.getItem('team_id')
-    if (newTask.title && newTask.description) {
+    if (newTask.title.trim() !== '' && newTask.description.trim() !== '') {
       const newTaskData = {
         title: newTask.title,
         description: newTask.description,
@@ -90,7 +89,7 @@ const TaskManagerPlanner = () => {
         assignedTo: newTask.assignedTo,
         complexity: newTask.complexity,
         sprint: selectedSprint,
-        proyecto: parseInt(teamId)
+        proyecto: teamId !== null && teamId !== '' ? parseInt(teamId) : 0
       }
 
       try {
@@ -113,7 +112,7 @@ const TaskManagerPlanner = () => {
     }
   }
 
-  const moveTask = async (taskId, newStatus) => {
+  const moveTask = async (taskId: string, newStatus: string): Promise<void> => {
     try {
       const payload = { id: taskId, status: newStatus }
       const response = await fetch(`${API_BASE_URL}/tasks`, {
@@ -123,7 +122,12 @@ const TaskManagerPlanner = () => {
       })
       if (response.ok) {
         setTasks((prevTasks) =>
-          prevTasks.map((task) => (task.id_serial === taskId ? { ...task, status: newStatus } : task))
+          prevTasks.map((task) => {
+            if ('id_serial' in task && task.id_serial === taskId) {
+              return { ...task, status: newStatus }
+            }
+            return task
+          })
         )
       } else {
         console.error('Failed to update task status')
@@ -133,7 +137,7 @@ const TaskManagerPlanner = () => {
     }
   }
 
-  const TaskCard = ({ task }) => {
+  const TaskCard: React.FC<{ task: any }> = ({ task }) => {
     const [{ isDragging }, drag] = useDrag(() => ({
       type: 'task',
       item: { id: task?.id_serial },
@@ -161,14 +165,14 @@ const TaskManagerPlanner = () => {
     )
   }
 
-  const Column = ({ status, children }) => {
+  const Column: React.FC<{ status: string, children: React.ReactNode }> = ({ status, children }) => {
     const [, drop] = useDrop({
       accept: 'task',
       drop: async (item) => {
-        if (item?.id) {
-          await moveTask(item.id, status)
+        if (item && typeof item === 'object' && 'id' in item) {
+          await moveTask(item.id as string, status)
         } else {
-          console.error('Task ID is missing!')
+          console.error('Task ID is missing or invalid!')
         }
       }
     })
@@ -181,10 +185,10 @@ const TaskManagerPlanner = () => {
     )
   }
 
-  const filterTasksByStatus = (status) => tasks.filter((task) => task.status === status)
-  const calculateProgress = () => (tasks.length === 0 ? 0 : (filterTasksByStatus('Terminado').length / tasks.length) * 100)
+  const filterTasksByStatus = (status: string): any[] => tasks.filter((task) => task.status === status)
+  const calculateProgress = (): number => (tasks.length === 0 ? 0 : (filterTasksByStatus('Terminado').length / tasks.length) * 100)
 
-  const getComplexityBadgeStyle = (complexity) => {
+  const getComplexityBadgeStyle = (complexity: string): React.CSSProperties => {
     switch (complexity) {
       case 'Basica': return { backgroundColor: '#d4edda', color: '#155724' }
       case 'Moderada': return { backgroundColor: '#d4edda', color: '#155724' }
@@ -269,7 +273,7 @@ const TaskManagerPlanner = () => {
                       </SelectContent>
                     </Select>
                     <Select
-                      value={newTask.sprint_id}
+                      value={newTask.sprint}
                       onValueChange={(value) => {
                         setSelectedSprint(value)
                         localStorage.setItem('selected_sprint', value) // Save selected sprint to localStorage
@@ -286,7 +290,7 @@ const TaskManagerPlanner = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button onClick={addTask} className='px-4 py-2'>
+                    <Button onClick={() => void addTask()} className='px-4 py-2'>
                       Añadir
                     </Button>
                   </div>

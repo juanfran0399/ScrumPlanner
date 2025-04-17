@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import Layout from '@/components/Layout'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Bar } from 'react-chartjs-2'
 
 // Interfaces for Sprint and Task
 interface Task {
@@ -17,20 +16,19 @@ interface Task {
 }
 
 interface Sprint {
+  sprint_id: string
+  objectives: string
   id: number
   title: string
   start_date: string
   end_date: string
-  objectives: string
   tasks: Task[]
 }
 
 const SprintPlanning: React.FC = () => {
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintIndex, setSelectedSprintIndex] = useState<number>(0)
-  const [newTask, setNewTask] = useState<string>('')
   const [objectives, setObjectives] = useState<string>('') // Ensure the objectives are initialized properly
-  const [newSprintTitle, setNewSprintTitle] = useState<string>('')
   const [newSprintStartDate, setNewSprintStartDate] = useState<string>('')
   const [newSprintEndDate, setNewSprintEndDate] = useState<string>('')
   const [teamId, setTeamId] = useState<number | null>(null)
@@ -95,20 +93,20 @@ const SprintPlanning: React.FC = () => {
 
   const currentSprint = sprints[selectedSprintIndex] || null
 
-  const handleCarga = async () => {
-    if (!userId || !currentSprint.sprint_id) {
-      console.error('User ID or Sprint ID is missing.')
+  const handleCarga = async (): Promise<void> => {
+    if (!userId || !currentSprint?.sprint_id) {
+      console.error('User ID or Sprint ID is missing')
       return
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/modelo/carga', {
+      await axios.post('http://localhost:5000/api/modelo/carga', {
         user_id: userId,
         sprint_id: currentSprint.sprint_id
       })
-      console.log(response.data.message)
+      console.log('Carga saved successfully')
     } catch (error) {
-      console.error('Error sending carga request:', error)
+      console.error('Error saving carga:', error)
     }
   }
 
@@ -124,11 +122,11 @@ const SprintPlanning: React.FC = () => {
     localStorage.setItem('objectives', updatedObjectives)
   }
 
-  const handleAddSprint = async (event: FormEvent<HTMLFormElement>) => {
+  const handleAddSprint = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
 
     if (!teamId) {
-      console.error('No team ID found.')
+      console.error('Team ID is missing')
       return
     }
 
@@ -147,7 +145,6 @@ const SprintPlanning: React.FC = () => {
       })
 
       setSprints([...sprints, response.data])
-      setNewSprintTitle('')
       setNewSprintStartDate('')
       setNewSprintEndDate('')
       window.location.reload()
@@ -263,7 +260,7 @@ const SprintPlanning: React.FC = () => {
                 <p><strong>Título:</strong> {currentSprint.title}</p>
                 <p><strong>Fecha de Inicio:</strong> {new Date(currentSprint.start_date).toISOString().split('T')[0]}</p>
                 <p><strong>Fecha de Fin:</strong> {new Date(currentSprint.end_date).toISOString().split('T')[0]}</p>
-                <p><strong>Objetivos:</strong> {currentSprint.Objectives}</p>
+                <p><strong>Objetivos:</strong> {currentSprint.objectives}</p>
                 <form onSubmit={handleSaveObjectives}>
                   <Textarea
                     value={objectives}

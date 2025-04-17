@@ -14,9 +14,9 @@ const Teams = () => {
   const [creatingTeam, setCreatingTeam] = useState(false)
   const [joiningTeam, setJoiningTeam] = useState(false)
   const [joinTeamPassword, setJoinTeamPassword] = useState('')
-  const [availableTeams, setAvailableTeams] = useState([])
+  const [availableTeams, setAvailableTeams] = useState<any[]>([]) // Updated type to any[] to match usage
   const [selectedTeam, setSelectedTeam] = useState('')
-  const [teamMembers, setTeamMembers] = useState([])
+  const [teamMembers, setTeamMembers] = useState<Array<{ user_id: number; nombre: string }>>([]) // Updated type to match usage
   const [showCreateTeam, setShowCreateTeam] = useState(false)
 
   useEffect(() => {

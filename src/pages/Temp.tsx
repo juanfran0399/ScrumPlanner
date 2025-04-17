@@ -6,10 +6,9 @@ import { IconPlus } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useDrag, useDrop, DndProvider } from 'react-dnd'
+import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
 const API_BASE_URL = 'http://localhost:5000/api/planner'
@@ -17,10 +16,10 @@ const columns = ['Backlog', 'Listo para asignar', 'En desarrollo', 'En revisión
 const complexityOptions = ['Baja', 'Media', 'Alta']
 
 const TaskManagerPlanner = () => {
-  const [tasks, setTasks] = useState([])
+  const [tasks, setTasks] = useState<any[]>([]) // Updated type to any[] to match usage
   const [newTask, setNewTask] = useState({ title: '', description: '', complexity: 'Baja', assignedTo: '' })
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false)
-  const [teamMembers, setTeamMembers] = useState([])
+  const [teamMembers, setTeamMembers] = useState<Array<{ user_id: number; username: string }>>([]) // Updated type to match usage
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -131,7 +130,7 @@ const TaskManagerPlanner = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {teamMembers.map((member) => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
+                      <SelectItem key={member.user_id} value={String(member.user_id)}>
                         {member.username}
                       </SelectItem>
                     ))}
