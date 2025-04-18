@@ -3,16 +3,15 @@ FROM node:18-alpine
 # Habilita pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# Crea directorio de trabajo
 WORKDIR /app
 
-# Copia solo los archivos necesarios para instalar deps (usa cache si no cambian)
-COPY package.json pnpm-lock.yaml ./
+# Clona shallow del repositorio directamente
+RUN apk add --no-cache git \
+    && git clone --depth=1 -b Fran https://github.com/DevelopmentUDG/ScrumPlanner.git /app
 
-# Instala deps primero
+# Instala dependencias (usa el lockfile clonado)
 RUN pnpm install
-
-# Ahora sí copia todo el código
-COPY . .
 
 # Expón el puerto Vite
 EXPOSE 5173
