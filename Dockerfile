@@ -3,22 +3,19 @@ FROM node:18-alpine
 # Habilita pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Directorio de trabajo
 WORKDIR /app
 
-# Copia archivos necesarios
-COPY pnpm-lock.yaml package.json ./
+# Copia solo los archivos necesarios para instalar deps (usa cache si no cambian)
+COPY package.json pnpm-lock.yaml ./
 
-# Instala dependencias
+# Instala deps primero
 RUN pnpm install
 
-# Copia el resto del código
+# Ahora sí copia todo el código
 COPY . .
 
-# Expone el puerto de Vite dev server
+# Expón el puerto Vite
 EXPOSE 5173
 
-# Comando para iniciar el servidor de desarrollo
+# Ejecuta Vite en modo dev y accesible
 CMD ["pnpm", "dev", "--host", "0.0.0.0"]
-
-
